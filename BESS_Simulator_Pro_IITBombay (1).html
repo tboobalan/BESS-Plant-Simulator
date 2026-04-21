@@ -1,0 +1,2342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BESS Plant Simulator Pro — IIT Bombay GIL</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg0:#04070f; --bg1:#080d1a; --bg2:#0c1220; --bg3:#101828;
+  --panel:#111926; --panel2:#16202e; --panel3:#1c2a3a;
+  --border:#1e3048; --border2:#244060; --border3:#2d5080;
+  --accent:#00c8ff; --accent2:#0099cc;
+  --green:#00e5a0; --green2:#00b87a;
+  --amber:#ffb830; --amber2:#cc8800;
+  --red:#ff4757; --red2:#cc2233;
+  --purple:#9d7fe8;
+  --teal:#00d4c8;
+  --text:#d4e8ff; --text2:#7a9ec0; --text3:#3a5878; --text4:#1e3050;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',sans-serif;
+  --display:'Rajdhani',sans-serif;
+  --r4:4px; --r8:8px; --r12:12px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--text);font-family:var(--sans);font-size:13px}
+
+/* ── GRID LAYOUT ── */
+.app{display:grid;grid-template-rows:48px 1fr;height:100vh}
+.content{display:grid;grid-template-columns:260px 1fr 240px;overflow:hidden}
+.left-panel{overflow-y:auto;background:var(--bg1);border-right:1px solid var(--border)}
+.center-panel{overflow-y:auto;background:var(--bg0);display:flex;flex-direction:column;gap:0}
+.right-panel{overflow-y:auto;background:var(--bg1);border-left:1px solid var(--border)}
+
+/* ── HEADER ── */
+header{
+  background:var(--bg1);border-bottom:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;gap:12px;flex-shrink:0;
+}
+.h-logo{display:flex;align-items:center;gap:10px}
+.h-logo-mark{
+  width:32px;height:32px;border:1.5px solid var(--accent);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;
+}
+.h-logo-mark::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;
+  background:var(--accent);opacity:.15;
+  animation:lvl 3s ease-in-out infinite;
+}
+@keyframes lvl{0%,100%{height:50%}50%{height:80%}}
+.h-logo-text{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:2px;color:var(--accent)}
+.h-logo-sub{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:1px}
+.h-center{display:flex;align-items:center;gap:16px;flex:1;justify-content:center}
+.h-pill{
+  display:flex;align-items:center;gap:6px;padding:3px 10px;
+  border:1px solid var(--border2);border-radius:20px;
+  font-family:var(--mono);font-size:10px;color:var(--text3);
+}
+.dot{width:5px;height:5px;border-radius:50%}
+.dot.g{background:var(--green);animation:bk 2s infinite}
+.dot.a{background:var(--amber);animation:bk 1.5s infinite}
+.dot.r{background:var(--red);animation:bk 0.8s infinite}
+@keyframes bk{0%,100%{opacity:1}50%{opacity:.2}}
+.h-right{display:flex;align-items:center;gap:10px}
+.h-clock{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.h-sim-status{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid}
+.h-sim-status.running{color:var(--green);border-color:var(--green)}
+.h-sim-status.stopped{color:var(--text3);border-color:var(--border)}
+.btn-sim{
+  padding:5px 14px;background:var(--accent);color:var(--bg0);
+  border:none;border-radius:6px;font-family:var(--display);font-size:13px;
+  font-weight:700;letter-spacing:1px;cursor:pointer;transition:.15s;
+}
+.btn-sim:hover{background:#33d4ff}
+.btn-sim.stop{background:var(--red);color:#fff}
+
+/* ── LEFT PANEL (INPUTS) ── */
+.sect{border-bottom:1px solid var(--border)}
+.sect-hd{
+  padding:8px 12px;background:var(--panel2);
+  font-family:var(--display);font-size:11px;font-weight:600;
+  letter-spacing:2px;color:var(--accent);
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+  user-select:none;
+}
+.sect-hd:hover{background:var(--panel3)}
+.sect-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.sect-body.collapsed{display:none}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:10px;color:var(--text3);letter-spacing:.5px;font-family:var(--mono)}
+.field input,.field select{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r4);
+  color:var(--text);font-family:var(--sans);font-size:12px;
+  padding:5px 8px;width:100%;outline:none;transition:.15s;
+}
+.field input:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,200,255,.1)}
+.field select{cursor:pointer}
+.field input[type=range]{padding:3px 0;border:none;background:transparent;accent-color:var(--accent)}
+.range-row{display:flex;align-items:center;gap:6px}
+.range-row input{flex:1}
+.rv{font-family:var(--mono);font-size:10px;color:var(--accent);min-width:50px;text-align:right}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.run-btn{
+  margin:10px 12px;padding:9px;background:var(--green);color:var(--bg0);
+  border:none;border-radius:var(--r8);font-family:var(--display);font-size:13px;
+  font-weight:700;letter-spacing:2px;cursor:pointer;width:calc(100% - 24px);transition:.15s;
+}
+.run-btn:hover{background:#33edb0;transform:translateY(-1px)}
+.fault-btns{display:flex;flex-direction:column;gap:5px}
+.fbtn{
+  padding:5px 8px;background:transparent;border:1px solid var(--border2);
+  border-radius:var(--r4);color:var(--text2);font-family:var(--mono);
+  font-size:10px;cursor:pointer;text-align:left;transition:.15s;
+}
+.fbtn:hover{border-color:var(--red);color:var(--red)}
+
+/* ── CENTER: KPI BAR ── */
+.kpi-bar{
+  display:grid;grid-template-columns:repeat(8,1fr);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.kpi{
+  padding:10px 8px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden;
+}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi.c-a::before{background:var(--accent)}
+.kpi.c-g::before{background:var(--green)}
+.kpi.c-o::before{background:var(--amber)}
+.kpi.c-r::before{background:var(--red)}
+.kpi.c-p::before{background:var(--purple)}
+.kpi.c-t::before{background:var(--teal)}
+.kpi-l{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.8px}
+.kpi-v{font-family:var(--mono);font-size:17px;font-weight:600;line-height:1.1}
+.kpi-v.c-a{color:var(--accent)}
+.kpi-v.c-g{color:var(--green)}
+.kpi-v.c-o{color:var(--amber)}
+.kpi-v.c-r{color:var(--red)}
+.kpi-v.c-p{color:var(--purple)}
+.kpi-v.c-t{color:var(--teal)}
+.kpi-u{font-size:9px;color:var(--text3)}
+
+/* ── CENTER: TABS ── */
+.tab-bar{
+  display:flex;border-bottom:1px solid var(--border);
+  background:var(--bg1);flex-shrink:0;
+}
+.tab{
+  padding:7px 14px;font-family:var(--display);font-size:12px;
+  font-weight:600;letter-spacing:1px;color:var(--text3);
+  border:none;background:transparent;cursor:pointer;border-bottom:2px solid transparent;
+  transition:.15s;
+}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--text2)}
+.tab-content{display:none;flex:1;overflow-y:auto}
+.tab-content.active{display:flex;flex-direction:column}
+
+/* ── CHARTS ── */
+.chart-grid{display:grid;gap:0}
+.chart-grid.g2{grid-template-columns:1fr 1fr}
+.chart-grid.g3{grid-template-columns:2fr 1fr 1fr}
+.chart-wrap{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:0;position:relative;
+}
+.chart-wrap.tl{border-top-left-radius:var(--r8)}
+.chart-wrap.tr{border-top-right-radius:var(--r8)}
+.chart-head{
+  padding:8px 12px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.chart-title{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--text2)}
+.badge{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;border:1px solid}
+.badge.live{color:var(--green);border-color:var(--green)}
+.badge.sim{color:var(--accent);border-color:var(--accent)}
+.badge.warn{color:var(--amber);border-color:var(--amber)}
+.badge.err{color:var(--red);border-color:var(--red)}
+.chart-body{padding:12px}
+.ch-canvas{position:relative;width:100%}
+
+/* ── SOC GAUGE ── */
+.gauge-container{display:flex;flex-direction:column;align-items:center;padding:12px 8px}
+.gauge-svg{width:160px;height:100px}
+.gauge-info{text-align:center;margin-top:4px}
+.gauge-val{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--green)}
+.gauge-sub{font-size:10px;color:var(--text3)}
+
+/* ── SOC STACKED BAR ── */
+.soc-stack{padding:8px 12px;border-top:1px solid var(--border)}
+.soc-bar{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;border:1px solid var(--border2)}
+.soc-fill{height:100%;border-radius:3px;transition:width .5s ease;position:relative;overflow:hidden}
+.soc-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:sh 2.5s infinite}
+@keyframes sh{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* ── POWER FLOW ── */
+.pflow{display:flex;align-items:center;justify-content:center;padding:12px;gap:0;flex-wrap:nowrap}
+.pnode{
+  background:var(--panel2);border:1px solid var(--border2);border-radius:var(--r8);
+  padding:8px 10px;text-align:center;min-width:80px;flex-shrink:0;
+}
+.pnode-icon{font-size:18px;margin-bottom:2px}
+.pnode-lbl{font-size:9px;color:var(--text3);font-family:var(--mono)}
+.pnode-val{font-family:var(--mono);font-size:11px;font-weight:600;margin-top:1px}
+.parrow{flex:1;min-width:30px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.parrow-line{width:100%;height:2px;position:relative;overflow:hidden;border-radius:1px}
+.parrow-anim{position:absolute;top:0;height:100%;width:40%;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:flow 1.2s linear infinite}
+.parrow-anim.rev{animation:flowR 1.2s linear infinite}
+@keyframes flow{0%{left:-40%}100%{left:100%}}
+@keyframes flowR{0%{right:-40%}100%{right:100%}}
+.parrow-lbl{font-size:9px;font-family:var(--mono);color:var(--text3)}
+
+/* ── DATA TABLE ── */
+.dtbl{width:100%;border-collapse:collapse;font-size:11px}
+.dtbl th{font-family:var(--mono);font-size:9px;letter-spacing:.8px;color:var(--text3);padding:5px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.dtbl td{padding:6px 8px;border-bottom:1px solid var(--border);font-family:var(--mono);color:var(--text2)}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl td.v{color:var(--text)}
+.dtbl td.vg{color:var(--green)}
+.dtbl td.vo{color:var(--amber)}
+.dtbl td.vr{color:var(--red)}
+.dtbl td.va{color:var(--accent)}
+
+/* ── DEGRADATION BARS ── */
+.deg-item{margin-bottom:10px}
+.deg-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.deg-name{font-size:10px;color:var(--text2)}
+.deg-bar{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;border:1px solid var(--border)}
+.deg-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+/* ── FAULT PANEL ── */
+.fault-item{
+  padding:7px 10px;border-radius:var(--r4);margin-bottom:5px;
+  display:flex;align-items:flex-start;gap:8px;
+  animation:fadein .3s ease;
+}
+@keyframes fadein{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.fault-item.CRITICAL{background:rgba(255,71,87,.08);border:1px solid rgba(255,71,87,.25)}
+.fault-item.HIGH{background:rgba(255,184,48,.07);border:1px solid rgba(255,184,48,.2)}
+.fault-item.MEDIUM{background:rgba(0,200,255,.06);border:1px solid rgba(0,200,255,.15)}
+.fault-item.LOW{background:rgba(0,229,160,.05);border:1px solid rgba(0,229,160,.15)}
+.fdot{width:6px;height:6px;border-radius:50%;margin-top:3px;flex-shrink:0}
+.fdot.CRITICAL{background:var(--red)}
+.fdot.HIGH{background:var(--amber)}
+.fdot.MEDIUM{background:var(--accent)}
+.fdot.LOW{background:var(--green)}
+.ftext{font-size:11px;color:var(--text2);line-height:1.4}
+.frelay{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--text)}
+.ftime{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:1px}
+.no-faults{text-align:center;padding:20px;font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* ── RIGHT PANEL ── */
+.rp-sect{border-bottom:1px solid var(--border);padding:10px 12px}
+.rp-title{font-family:var(--display);font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--accent);margin-bottom:8px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.metric-card{background:var(--panel2);border:1px solid var(--border);border-radius:var(--r8);padding:8px 10px}
+.mc-lbl{font-size:9px;color:var(--text3);font-family:var(--mono);letter-spacing:.5px}
+.mc-val{font-family:var(--mono);font-size:14px;font-weight:600;margin-top:2px}
+.rev-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.rev-row:last-child{border-bottom:none}
+.rev-lbl{font-size:11px;color:var(--text2)}
+.rev-val{font-family:var(--mono);font-size:12px;font-weight:600}
+
+/* ── LOADING ── */
+#loader{
+  position:fixed;inset:0;background:var(--bg0);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+}
+.ld-logo{font-family:var(--display);font-size:28px;font-weight:700;letter-spacing:4px;color:var(--accent)}
+.ld-sub{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--text3)}
+.ld-bar{width:300px;height:2px;background:var(--border);border-radius:1px;overflow:hidden}
+.ld-fill{height:100%;background:var(--accent);border-radius:1px;animation:ldfill 2s ease-out forwards}
+@keyframes ldfill{0%{width:0}100%{width:100%}}
+.ld-steps{font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;height:14px}
+
+/* ── WAVEFORM ── */
+.waveform-wrap{width:100%;height:60px;overflow:hidden}
+canvas.waveform{width:100%;height:60px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg1)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* TOOLTIP */
+[data-tip]{position:relative;cursor:help}
+[data-tip]:hover::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--panel2);border:1px solid var(--border2);
+  padding:4px 8px;border-radius:var(--r4);font-size:10px;color:var(--text2);
+  white-space:nowrap;z-index:100;pointer-events:none;font-family:var(--mono);
+}
+
+.inp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-logo">BESS · SIM · PRO</div>
+  <div class="ld-sub">IIT BOMBAY — GRID INTEGRATION LAB</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+  <div class="ld-steps" id="ldStep">Initialising physics engine...</div>
+</div>
+
+<div class="app">
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header>
+  <div class="h-logo">
+    <div class="h-logo-mark">
+      <svg width="18" height="18" viewBox="0 0 18 18">
+        <rect x="2" y="4" width="14" height="10" rx="2" fill="none" stroke="#00c8ff" stroke-width="1.5"/>
+        <rect x="5" y="7" width="2" height="4" fill="#00c8ff" opacity=".6" rx="1"/>
+        <rect x="8" y="6" width="2" height="6" fill="#00c8ff" opacity=".8" rx="1"/>
+        <rect x="11" y="8" width="2" height="2" fill="#00c8ff" opacity=".4" rx="1"/>
+        <rect x="1" y="7" width="1" height="4" fill="#00c8ff" rx=".5"/>
+      </svg>
+    </div>
+    <div>
+      <div class="h-logo-text">BESS SIM PRO</div>
+      <div class="h-logo-sub">IIT BOMBAY · StoREin · GRID INTEGRATION LAB</div>
+    </div>
+  </div>
+  <div class="h-center">
+    <div class="h-pill"><div class="dot g"></div>GRID NOMINAL</div>
+    <div class="h-pill"><div class="dot a" id="simDot"></div><span id="simStatusTxt">SIM IDLE</span></div>
+    <div class="h-pill" id="freqPill"><div class="dot g"></div>FREQ: <span id="hFreq">50.00</span> Hz</div>
+    <div class="h-pill">EFC: <span id="hEFC">0</span></div>
+    <div class="h-pill">SOH: <span id="hSOH">100.0</span>%</div>
+  </div>
+  <div class="h-right">
+    <div class="h-clock" id="clock">--:--:--</div>
+    <span class="h-sim-status stopped" id="simBadge">● STOPPED</span>
+    <button class="btn-sim" id="masterBtn" onclick="toggleSimulation()">▶ START SIM</button>
+  </div>
+</header>
+
+<div class="content">
+<!-- ═══════════════════ LEFT PANEL — INPUTS ═══════════════════ -->
+<div class="left-panel">
+
+  <!-- PLANT CONFIG -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" rx="1" fill="none" stroke="#00c8ff" stroke-width="1.2"/><line x1="3" y1="4" x2="7" y2="4" stroke="#00c8ff" stroke-width="1"/><line x1="3" y1="6" x2="6" y2="6" stroke="#00c8ff" stroke-width="1"/></svg>
+      PLANT CONFIG
+    </div>
+    <div class="sect-body">
+      <div class="field"><label>Site ID</label><input id="siteId" value="BESS-GIL-MH-01"></div>
+      <div class="field"><label>Battery Chemistry</label>
+        <select id="chemistry" onchange="onChemChange()">
+          <option value="LFP" selected>LFP — LiFePO₄</option>
+          <option value="NMC">NMC 811</option>
+          <option value="NCA">NCA</option>
+          <option value="VRFB">VRFB — Vanadium Flow</option>
+          <option value="LTO">LTO — Li₄Ti₅O₁₂</option>
+          <option value="HYBRID_LIC">Hybrid LIC (SC+Battery)</option>
+        </select>
+      </div>
+      <div class="field"><label>Inverter Topology</label>
+        <select id="inverterType">
+          <option value="3L-NPC" selected>3L-NPC (Neutral Point Clamped)</option>
+          <option value="2L-VSC">2L-VSC (Voltage Source)</option>
+          <option value="MMC">MMC (Modular Multilevel)</option>
+          <option value="CHB">CHB (Cascaded H-Bridge)</option>
+          <option value="Z-Source">Z-Source Converter</option>
+        </select>
+      </div>
+      <div class="field"><label>Operating Mode</label>
+        <select id="opMode">
+          <option value="FREQ" selected>FFR/PFR — Frequency Regulation</option>
+          <option value="PEAK">Peak Shaving / Load Levelling</option>
+          <option value="ARB">Energy Arbitrage</option>
+          <option value="VPP">VPP — Virtual Power Plant</option>
+          <option value="VOLT">Voltage Support (Q-priority)</option>
+          <option value="UPS">UPS / Black Start</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELECTRICAL -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="none" stroke="#00c8ff" stroke-width="1.2"/><path d="M5 3v2l2 1" stroke="#00c8ff" stroke-width="1" stroke-linecap="round"/></svg>
+      ELECTRICAL
+    </div>
+    <div class="sect-body">
+      <div class="field"><label>Rated Power (MW)</label>
+        <div class="range-row"><input type="range" id="rPow" min="1" max="500" value="100" step="1" oninput="rr('rPow','rvPow','MW')"><span class="rv" id="rvPow">100 MW</span></div>
+      </div>
+      <div class="field"><label>Energy Capacity (MWh)</label>
+        <div class="range-row"><input type="range" id="rEn" min="10" max="4000" value="400" step="10" oninput="rr('rEn','rvEn','MWh')"><span class="rv" id="rvEn">400 MWh</span></div>
+      </div>
+      <div class="inp-grid">
+        <div class="field"><label>DC Bus (V)</label><input type="number" id="dcBus" value="1500" min="400" max="2000" step="50"></div>
+        <div class="field"><label>AC Grid (kV)</label>
+          <select id="acKV"><option value="11">11 kV</option><option value="33">33 kV</option><option value="66">66 kV</option><option value="132" selected>132 kV</option><option value="220">220 kV</option><option value="400">400 kV</option></select>
+        </div>
+      </div>
+      <div class="inp-grid">
+        <div class="field"><label>Grid Freq (Hz)</label>
+          <select id="gridFreq"><option value="50" selected>50 Hz</option><option value="60">60 Hz</option></select>
+        </div>
+        <div class="field"><label>Power Factor</label><input type="number" id="pf" value="0.95" min="0.8" max="1" step="0.01"></div>
+      </div>
+      <div class="field"><label>Initial SOC (%)</label>
+        <div class="range-row"><input type="range" id="socInit" min="10" max="95" value="60" step="1" oninput="rr('socInit','rvSOC','%')"><span class="rv" id="rvSOC">60%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CELL SPECS -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><rect x="2" y="1" width="6" height="8" rx="1" fill="none" stroke="#00c8ff" stroke-width="1.2"/><rect x="4" y="0" width="2" height="2" rx=".5" fill="#00c8ff"/><line x1="4" y1="4" x2="6" y2="4" stroke="#00c8ff" stroke-width=".8"/><line x1="4" y1="6" x2="6" y2="6" stroke="#00c8ff" stroke-width=".8"/></svg>
+      CELL / MODULE
+    </div>
+    <div class="sect-body">
+      <div class="inp-grid">
+        <div class="field"><label>Cell Voltage (V)</label><input type="number" id="cellV" value="3.2" min="1.0" max="5.0" step="0.05"></div>
+        <div class="field"><label>Cell Capacity (Ah)</label><input type="number" id="cellAh" value="280" min="1" max="2000" step="10"></div>
+      </div>
+      <div class="inp-grid">
+        <div class="field"><label>Series / String</label><input type="number" id="cellS" value="16" min="1" max="300"></div>
+        <div class="field"><label>Parallel / Rack</label><input type="number" id="cellP" value="8" min="1" max="200"></div>
+      </div>
+      <div class="field"><label>C-rate (charge = discharge)</label>
+        <div class="range-row"><input type="range" id="cRate" min="0.05" max="4" value="0.25" step="0.05" oninput="rr('cRate','rvCR','C')"><span class="rv" id="rvCR">0.25C</span></div>
+      </div>
+      <div class="field"><label>Self-discharge (%/day)</label>
+        <div class="range-row"><input type="range" id="selfD" min="0.01" max="3" value="0.05" step="0.01" oninput="rr('selfD','rvSD','%/d')"><span class="rv" id="rvSD">0.05%/d</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THERMAL -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 1v5" stroke="#00c8ff" stroke-width="1.2" stroke-linecap="round"/><circle cx="5" cy="7.5" r="2" fill="none" stroke="#00c8ff" stroke-width="1.2"/></svg>
+      THERMAL / BMS
+    </div>
+    <div class="sect-body">
+      <div class="field"><label>Ambient Temperature (°C)</label>
+        <div class="range-row"><input type="range" id="ambT" min="-10" max="55" value="35" step="1" oninput="rr('ambT','rvAT','°C')"><span class="rv" id="rvAT">35°C</span></div>
+      </div>
+      <div class="inp-grid">
+        <div class="field"><label>HVAC Setpoint (°C)</label><input type="number" id="hvacSet" value="25" min="10" max="40"></div>
+        <div class="field"><label>HVAC Capacity (kW)</label><input type="number" id="hvacCap" value="500" min="10" max="5000" step="50"></div>
+      </div>
+      <div class="inp-grid">
+        <div class="field"><label>SOC Min (%)</label><input type="number" id="socMin" value="10" min="0" max="40"></div>
+        <div class="field"><label>SOC Max (%)</label><input type="number" id="socMax" value="90" min="60" max="100"></div>
+      </div>
+      <div class="field"><label>DoD Limit (%)</label>
+        <div class="range-row"><input type="range" id="dod" min="50" max="100" value="80" step="1" oninput="rr('dod','rvDoD','%')"><span class="rv" id="rvDoD">80%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGEING -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="none" stroke="#00c8ff" stroke-width="1.2"/><path d="M5 2v3l2 2" stroke="#00c8ff" stroke-width="1" stroke-linecap="round"/></svg>
+      AGEING / LIFECYCLE
+    </div>
+    <div class="sect-body">
+      <div class="field"><label>Rated Cycle Life (cycles @ 80% DoD)</label><input type="number" id="cycleLife" value="6000" min="500" max="100000" step="500"></div>
+      <div class="field"><label>Calendar Life (years)</label><input type="number" id="calLife" value="15" min="3" max="30"></div>
+      <div class="inp-grid">
+        <div class="field"><label>Project Life (yr)</label><input type="number" id="projLife" value="20" min="5" max="30"></div>
+        <div class="field"><label>Discount Rate (%)</label><input type="number" id="discRate" value="8" min="1" max="20" step="0.5"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ECONOMICS -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="2" width="8" height="6" rx="1" fill="none" stroke="#00c8ff" stroke-width="1.2"/><line x1="1" y1="5" x2="9" y2="5" stroke="#00c8ff" stroke-width=".8"/></svg>
+      ECONOMICS
+    </div>
+    <div class="sect-body">
+      <div class="field"><label>CAPEX Battery (₹ Cr/MWh)</label><input type="number" id="capexBatt" value="3.2" min="0.5" max="20" step="0.1"></div>
+      <div class="field"><label>O&amp;M (₹ Lakh/MW/yr)</label><input type="number" id="opexMW" value="8" min="1" max="100" step="0.5"></div>
+      <div class="inp-grid">
+        <div class="field"><label>Off-peak (₹/kWh)</label><input type="number" id="tarLow" value="2.5" min="0.5" max="20" step="0.1"></div>
+        <div class="field"><label>Peak (₹/kWh)</label><input type="number" id="tarHigh" value="7.5" min="1" max="50" step="0.1"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAULT INJECTION -->
+  <div class="sect">
+    <div class="sect-hd" onclick="toggleSect(this)">
+      <svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 1L9 8H1Z" fill="none" stroke="#ff4757" stroke-width="1.2"/><line x1="5" y1="4" x2="5" y2="6" stroke="#ff4757" stroke-width="1"/><circle cx="5" cy="7" r=".5" fill="#ff4757"/></svg>
+      FAULT INJECTION
+    </div>
+    <div class="sect-body fault-btns">
+      <button class="fbtn" onclick="injectFault('ground_fault')">⚡ Ground Fault (64-GF)</button>
+      <button class="fbtn" onclick="injectFault('cell_imbalance')">⬡ Cell Imbalance (BMS-IMB)</button>
+      <button class="fbtn" onclick="injectFault('comm_loss')">◈ BMS Comm Loss (COM-01)</button>
+      <button class="fbtn" onclick="injectFault('contactor_fail')">✕ Contactor Failure (SYS-CTR)</button>
+      <button class="fbtn" onclick="injectFault('cooling_fail')">❄ HVAC Failure (THM-01)</button>
+      <button class="fbtn" style="color:var(--green);border-color:var(--green)" onclick="clearFaults()">✓ Clear All Faults</button>
+    </div>
+  </div>
+
+  <button class="run-btn" onclick="applyAndRun()">▶ APPLY &amp; RUN SIMULATION</button>
+  <div style="height:20px"></div>
+</div><!-- end left -->
+
+<!-- ═══════════════════ CENTER PANEL ═══════════════════ -->
+<div class="center-panel">
+
+  <!-- KPI BAR -->
+  <div class="kpi-bar">
+    <div class="kpi c-a" data-tip="Rated AC power output">
+      <div class="kpi-l">POWER</div>
+      <div class="kpi-v c-a" id="kPow">100</div>
+      <div class="kpi-u">MW rated</div>
+    </div>
+    <div class="kpi c-g" data-tip="Usable energy (DoD limited)">
+      <div class="kpi-l">ENERGY</div>
+      <div class="kpi-v c-g" id="kEn">320</div>
+      <div class="kpi-u">MWh usable</div>
+    </div>
+    <div class="kpi c-o" data-tip="State of Charge — real-time">
+      <div class="kpi-l">SOC</div>
+      <div class="kpi-v c-o" id="kSOC">60.0</div>
+      <div class="kpi-u">%</div>
+    </div>
+    <div class="kpi c-t" data-tip="Cell temperature">
+      <div class="kpi-l">T CELL</div>
+      <div class="kpi-v c-t" id="kTemp">35.0</div>
+      <div class="kpi-u">°C</div>
+    </div>
+    <div class="kpi c-p" data-tip="State of Health — capacity">
+      <div class="kpi-l">SOH</div>
+      <div class="kpi-v c-p" id="kSOH">100.0</div>
+      <div class="kpi-u">%</div>
+    </div>
+    <div class="kpi c-a" data-tip="Inverter round-trip efficiency">
+      <div class="kpi-l">RTE</div>
+      <div class="kpi-v c-a" id="kRTE">93.0</div>
+      <div class="kpi-u">%</div>
+    </div>
+    <div class="kpi c-g" data-tip="Net power to/from grid">
+      <div class="kpi-l">P GRID</div>
+      <div class="kpi-v c-g" id="kPGrid">0.0</div>
+      <div class="kpi-u">MW</div>
+    </div>
+    <div class="kpi c-o" data-tip="Frequency deviation">
+      <div class="kpi-l">Δf</div>
+      <div class="kpi-v c-o" id="kDf">0.00</div>
+      <div class="kpi-u">mHz</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('overview',this)">OVERVIEW</button>
+    <button class="tab" onclick="showTab('electroch',this)">ELECTROCHEMISTRY</button>
+    <button class="tab" onclick="showTab('thermal',this)">THERMAL</button>
+    <button class="tab" onclick="showTab('grid',this)">GRID / PCS</button>
+    <button class="tab" onclick="showTab('degradation',this)">DEGRADATION</button>
+    <button class="tab" onclick="showTab('finance',this)">FINANCE</button>
+    <button class="tab" onclick="showTab('faults',this)">FAULTS</button>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div class="tab-content active" id="tab-overview">
+    <!-- Power flow -->
+    <div class="chart-wrap">
+      <div class="chart-head"><span class="chart-title">POWER FLOW TOPOLOGY</span><span class="badge live">LIVE</span></div>
+      <div class="pflow">
+        <div class="pnode" style="border-color:rgba(255,184,48,.35)">
+          <div class="pnode-icon">☀</div>
+          <div class="pnode-lbl">RE / GRID</div>
+          <div class="pnode-val" id="pn-re" style="color:var(--amber)">0 MW</div>
+        </div>
+        <div class="parrow">
+          <div class="parrow-line" style="background:rgba(255,184,48,.15)"><div class="parrow-anim" style="background:linear-gradient(90deg,transparent,var(--amber),transparent)"></div></div>
+          <div class="parrow-lbl">charging</div>
+        </div>
+        <div class="pnode" style="border-color:rgba(0,200,255,.35)">
+          <div class="pnode-icon">⬡</div>
+          <div class="pnode-lbl">PCS / INV</div>
+          <div class="pnode-val" id="pn-pcs" style="color:var(--accent)">0 MW</div>
+        </div>
+        <div class="parrow">
+          <div class="parrow-line" style="background:rgba(0,229,160,.15)"><div class="parrow-anim" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div></div>
+          <div class="parrow-lbl">DC bus</div>
+        </div>
+        <div class="pnode" style="border-color:rgba(157,127,232,.35)">
+          <div class="pnode-icon">⚡</div>
+          <div class="pnode-lbl">BATTERY</div>
+          <div class="pnode-val" id="pn-batt" style="color:var(--purple)">— MWh</div>
+        </div>
+        <div class="parrow">
+          <div class="parrow-line" style="background:rgba(0,229,160,.15)"><div class="parrow-anim" style="background:linear-gradient(90deg,transparent,var(--green),transparent)"></div></div>
+          <div class="parrow-lbl">AC grid</div>
+        </div>
+        <div class="pnode" style="border-color:rgba(0,212,200,.35)">
+          <div class="pnode-icon">⊞</div>
+          <div class="pnode-lbl">GRID</div>
+          <div class="pnode-val" id="pn-grid" style="color:var(--teal)">0 MW</div>
+        </div>
+        <div class="parrow">
+          <div class="parrow-line" style="background:rgba(0,212,200,.15)"><div class="parrow-anim rev" style="background:linear-gradient(90deg,transparent,var(--teal),transparent)"></div></div>
+          <div class="parrow-lbl">HVAC/Aux</div>
+        </div>
+        <div class="pnode" style="border-color:rgba(255,71,87,.25)">
+          <div class="pnode-icon">❄</div>
+          <div class="pnode-lbl">HVAC+AUX</div>
+          <div class="pnode-val" id="pn-hvac" style="color:var(--red)">0 kW</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SOC gauge + 24h profile -->
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">24-HOUR DISPATCH PROFILE</span><span class="badge sim">SIMULATED</span></div>
+        <div class="chart-body">
+          <div class="ch-canvas" style="height:200px"><canvas id="cDisp" role="img" aria-label="24 hour dispatch profile">SOC and power dispatch over 24 hours.</canvas></div>
+        </div>
+        <div style="padding:0 12px 8px;display:flex;gap:16px">
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)"><span style="width:10px;height:2px;background:var(--green);display:inline-block"></span>SOC (%)</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)"><span style="width:10px;height:2px;background:var(--accent);display:inline-block;border-top:2px dashed var(--accent)"></span>Power (MW)</div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3)"><span style="width:10px;height:2px;background:var(--amber);display:inline-block"></span>Price (₹/kWh)</div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">STATE OF CHARGE</span><span class="badge live">LIVE</span></div>
+        <div class="gauge-container">
+          <svg class="gauge-svg" viewBox="0 0 160 100">
+            <path d="M18 95 A62 62 0 0 1 142 95" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" stroke-linecap="round"/>
+            <path id="gaugeArc" d="M18 95 A62 62 0 0 1 142 95" fill="none" stroke="url(#gGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="195" stroke-dashoffset="78"/>
+            <defs>
+              <linearGradient id="gGrad"><stop offset="0%" stop-color="#00b87a"/><stop offset="100%" stop-color="#00e5a0"/></linearGradient>
+            </defs>
+            <text x="80" y="80" text-anchor="middle" fill="#00e5a0" font-family="'IBM Plex Mono',monospace" font-size="22" font-weight="600" id="gaugeTxt">60%</text>
+            <text x="18" y="100" fill="#3a5878" font-family="'IBM Plex Mono',monospace" font-size="8">MIN</text>
+            <text x="142" y="100" fill="#3a5878" font-family="'IBM Plex Mono',monospace" font-size="8" text-anchor="end">MAX</text>
+          </svg>
+          <div class="gauge-info">
+            <div style="font-size:11px;color:var(--text2)">Available Energy</div>
+            <div style="font-family:var(--mono);font-size:16px;font-weight:600;color:var(--green)" id="avail_E">— MWh</div>
+          </div>
+        </div>
+        <div class="soc-stack">
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);font-family:var(--mono);margin-bottom:3px">
+            <span id="socMinLbl">SOC_MIN: 10%</span><span id="socMaxLbl">SOC_MAX: 90%</span>
+          </div>
+          <div class="soc-bar"><div class="soc-fill" id="socFill" style="width:60%;background:linear-gradient(90deg,var(--green2),var(--green))"></div></div>
+          <div style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:6px">
+            TIME TO FULL: <span id="ttf" style="color:var(--accent)">4h 00m</span> &nbsp;|&nbsp; TIME TO EMPTY: <span id="tte" style="color:var(--red)">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ELECTROCHEMISTRY TAB -->
+  <div class="tab-content" id="tab-electroch">
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">OCV vs SOC CURVE</span><span class="badge sim">SHEPHERD MODEL</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:220px"><canvas id="cOCV" role="img" aria-label="OCV vs SOC curve">Open circuit voltage vs state of charge.</canvas></div></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">INTERNAL RESISTANCE vs SOC</span><span class="badge sim">ARRHENIUS</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:220px"><canvas id="cRi" role="img" aria-label="Internal resistance vs SOC">Internal resistance vs state of charge.</canvas></div></div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-head"><span class="chart-title">TERMINAL VOLTAGE &amp; CURRENT — REAL TIME</span><span class="badge live">LIVE</span></div>
+      <div class="chart-body"><div class="ch-canvas" style="height:160px"><canvas id="cVI" role="img" aria-label="Real time voltage and current waveform">Voltage and current real time.</canvas></div></div>
+    </div>
+    <div style="padding:10px">
+      <table class="dtbl" id="ecTable">
+        <thead><tr><th>PARAMETER</th><th>VALUE</th><th>UNIT</th><th>STATUS</th></tr></thead>
+        <tbody>
+          <tr><td>OCV at current SOC</td><td class="v" id="ec-ocv">—</td><td>V</td><td><span class="badge sim">CALC</span></td></tr>
+          <tr><td>Terminal Voltage</td><td class="va" id="ec-vt">—</td><td>V/cell</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Pack Voltage (DC)</td><td class="v" id="ec-vpack">—</td><td>V</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Cell Current</td><td class="v" id="ec-ic">—</td><td>A</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Internal Resistance</td><td class="vo" id="ec-ri">—</td><td>mΩ</td><td><span class="badge sim">CALC</span></td></tr>
+          <tr><td>Equivalent Full Cycles</td><td class="v" id="ec-efc">—</td><td>cycles</td><td><span class="badge sim">ACCUM</span></td></tr>
+          <tr><td>Peukert Coefficient</td><td class="v">1.05</td><td>—</td><td><span class="badge sim">FIXED</span></td></tr>
+          <tr><td>C-rate (current)</td><td class="v" id="ec-cr">—</td><td>C</td><td><span class="badge live">LIVE</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- THERMAL TAB -->
+  <div class="tab-content" id="tab-thermal">
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">TEMPERATURE PROFILE (CELL / MODULE / CONTAINER)</span><span class="badge live">LIVE</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cTemp" role="img" aria-label="Temperature profile chart">Cell module and container temperature over time.</canvas></div></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">HVAC POWER vs HEAT GENERATION</span><span class="badge live">LIVE</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cHVAC" role="img" aria-label="HVAC power versus heat generation">HVAC power and heat generation.</canvas></div></div>
+      </div>
+    </div>
+    <div style="padding:10px">
+      <table class="dtbl">
+        <thead><tr><th>THERMAL PARAMETER</th><th>VALUE</th><th>LIMIT</th><th>STATUS</th></tr></thead>
+        <tbody>
+          <tr><td>Cell Temperature</td><td class="va" id="th-cell">—</td><td>55°C</td><td id="th-cell-s">—</td></tr>
+          <tr><td>Module Temperature</td><td class="v" id="th-mod">—</td><td>50°C</td><td id="th-mod-s">—</td></tr>
+          <tr><td>Container Temperature</td><td class="v" id="th-cont">—</td><td>45°C</td><td id="th-cont-s">—</td></tr>
+          <tr><td>HVAC Power</td><td class="v" id="th-hvac">—</td><td>—</td><td><span class="badge live">LIVE</span></td></tr>
+          <tr><td>Heat Generation (total)</td><td class="vo" id="th-qheat">—</td><td>—</td><td><span class="badge sim">CALC</span></td></tr>
+          <tr><td>Thermal Runaway Risk</td><td colspan="2" id="th-risk">—</td><td>—</td></tr>
+          <tr><td>Thermal Runaway Threshold</td><td class="v" id="th-trT">—</td><td>°C</td><td><span class="badge sim">CHEMISTRY</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GRID / PCS TAB -->
+  <div class="tab-content" id="tab-grid">
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">GRID FREQUENCY (OU PROCESS)</span><span class="badge live">SIMULATED</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:180px"><canvas id="cFreq" role="img" aria-label="Grid frequency chart">Grid frequency simulation.</canvas></div></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">P-Q CAPABILITY DIAGRAM</span><span class="badge sim">INVERTER</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:180px"><canvas id="cPQ" role="img" aria-label="P-Q capability diagram">Active and reactive power capability.</canvas></div></div>
+      </div>
+    </div>
+    <div style="padding:10px">
+      <table class="dtbl">
+        <thead><tr><th>PCS / GRID PARAMETER</th><th>VALUE</th><th>UNIT</th></tr></thead>
+        <tbody>
+          <tr><td>Converter Efficiency</td><td class="vg" id="g-eff">—</td><td>%</td></tr>
+          <tr><td>AC Output Power</td><td class="va" id="g-pac">—</td><td>MW</td></tr>
+          <tr><td>Reactive Power (Q)</td><td class="v" id="g-q">—</td><td>MVAR</td></tr>
+          <tr><td>Apparent Power (S)</td><td class="v" id="g-s">—</td><td>MVA</td></tr>
+          <tr><td>Transformer Losses</td><td class="vo" id="g-xfmr">—</td><td>MW</td></tr>
+          <tr><td>THD</td><td class="v" id="g-thd">—</td><td>%</td></tr>
+          <tr><td>Freq Response Power</td><td class="vg" id="g-frp">—</td><td>MW</td></tr>
+          <tr><td>Inverter Response Time</td><td class="v" id="g-rt">—</td><td>ms</td></tr>
+          <tr><td>Modulation Index</td><td class="v" id="g-mi">—</td><td>pu</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DEGRADATION TAB -->
+  <div class="tab-content" id="tab-degradation">
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">CAPACITY FADE vs TIME (WANG MODEL)</span><span class="badge sim">ARRHENIUS</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cFade" role="img" aria-label="Capacity fade over project life">Capacity fade projection.</canvas></div></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">LOSS BREAKDOWN (SANKEY)</span><span class="badge sim">CALC</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cLoss" role="img" aria-label="System loss breakdown doughnut">Loss breakdown by category.</canvas></div></div>
+      </div>
+    </div>
+    <div style="padding:10px">
+      <div class="deg-item"><div class="deg-head"><span class="deg-name">State of Health — Capacity</span><span class="badge live" id="db-sohC">100.0%</span></div><div class="deg-bar"><div class="deg-fill" id="df-sohC" style="width:100%;background:var(--green)"></div></div></div>
+      <div class="deg-item"><div class="deg-head"><span class="deg-name">State of Health — Power</span><span class="badge live" id="db-sohP">100.0%</span></div><div class="deg-bar"><div class="deg-fill" id="df-sohP" style="width:100%;background:var(--accent)"></div></div></div>
+      <div class="deg-item"><div class="deg-head"><span class="deg-name">Capacity Fade</span><span class="badge warn" id="db-capF">0.0%</span></div><div class="deg-bar"><div class="deg-fill" id="df-capF" style="width:0%;background:var(--amber)"></div></div></div>
+      <div class="deg-item"><div class="deg-head"><span class="deg-name">Resistance Rise</span><span class="badge warn" id="db-ri">0.0%</span></div><div class="deg-bar"><div class="deg-fill" id="df-ri" style="width:0%;background:var(--red)"></div></div></div>
+      <table class="dtbl" style="margin-top:8px">
+        <thead><tr><th>LIFECYCLE PARAMETER</th><th>VALUE</th></tr></thead>
+        <tbody>
+          <tr><td>Years to 80% SOH (EoL)</td><td class="vg" id="d-y80">—</td></tr>
+          <tr><td>Years to 70% SOH</td><td class="vo" id="d-y70">—</td></tr>
+          <tr><td>Battery Replacement Year</td><td class="vo" id="d-repY">—</td></tr>
+          <tr><td>Total Ah Throughput</td><td class="v" id="d-ah">—</td></tr>
+          <tr><td>EFC (Equiv. Full Cycles)</td><td class="v" id="d-efc">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FINANCE TAB -->
+  <div class="tab-content" id="tab-finance">
+    <div class="chart-grid g2">
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">ANNUAL NET CASHFLOW (₹ Cr)</span><span class="badge sim">NPV MODEL</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cCash" role="img" aria-label="Annual cashflow bar chart">Annual net cashflow over project life.</canvas></div></div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-head"><span class="chart-title">CAPEX BREAKDOWN</span><span class="badge sim">ESTIMATE</span></div>
+        <div class="chart-body"><div class="ch-canvas" style="height:200px"><canvas id="cCapex" role="img" aria-label="CAPEX breakdown pie">CAPEX breakdown by component.</canvas></div></div>
+      </div>
+    </div>
+    <div style="padding:10px">
+      <table class="dtbl">
+        <thead><tr><th>FINANCIAL METRIC</th><th>VALUE</th><th>NOTES</th></tr></thead>
+        <tbody>
+          <tr><td>Total CAPEX</td><td class="va" id="f-capex">—</td><td>Battery + PCS + BoP + EPC</td></tr>
+          <tr><td>Annual Revenue</td><td class="vg" id="f-rev">—</td><td>Arbitrage + ancillary</td></tr>
+          <tr><td>Annual OPEX</td><td class="vo" id="f-opex">—</td><td>O&M + insurance</td></tr>
+          <tr><td>Simple Payback</td><td class="v" id="f-pb">—</td><td>years</td></tr>
+          <tr><td>NPV (project life)</td><td class="v" id="f-npv">—</td><td>at discount rate</td></tr>
+          <tr><td>IRR</td><td class="v" id="f-irr">—</td><td>Internal rate of return</td></tr>
+          <tr><td>LCOE</td><td class="vr" id="f-lcoe">—</td><td>₹/kWh levelised</td></tr>
+          <tr><td>Battery Replacement Cost</td><td class="vo" id="f-batRep">—</td><td>Year <span id="f-batRepYr">—</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- FAULTS TAB -->
+  <div class="tab-content" id="tab-faults">
+    <div style="padding:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-family:var(--display);font-size:12px;letter-spacing:1px;color:var(--text2)">PROTECTION RELAY LOG</div>
+        <div style="display:flex;gap:8px">
+          <span class="badge live" id="tripBadge">0 TRIPS</span>
+          <button class="fbtn" style="font-size:9px;padding:2px 8px" onclick="clearFaults()">CLEAR LOG</button>
+        </div>
+      </div>
+      <div id="faultLog"><div class="no-faults">No active faults — protection system nominal</div></div>
+    </div>
+  </div>
+
+</div><!-- end center -->
+
+<!-- ═══════════════════ RIGHT PANEL ═══════════════════ -->
+<div class="right-panel">
+
+  <!-- PACK CONFIG -->
+  <div class="rp-sect">
+    <div class="rp-title">PACK CONFIGURATION</div>
+    <table class="dtbl">
+      <tr><td>Total Racks</td><td class="v" id="r-racks">—</td></tr>
+      <tr><td>Series / String</td><td class="v" id="r-series">—</td></tr>
+      <tr><td>Parallel / Rack</td><td class="v" id="r-par">—</td></tr>
+      <tr><td>Total Cells</td><td class="vg" id="r-cells">—</td></tr>
+      <tr><td>String Voltage</td><td class="va" id="r-sv">—</td></tr>
+      <tr><td>Rack Energy</td><td class="v" id="r-re">—</td></tr>
+      <tr><td>Containers (40ft)</td><td class="vo" id="r-cont">—</td></tr>
+      <tr><td>PCS Units</td><td class="v" id="r-pcs">—</td></tr>
+      <tr><td>Total Mass</td><td class="v" id="r-mass">—</td></tr>
+      <tr><td>Footprint</td><td class="v" id="r-fp">—</td></tr>
+    </table>
+  </div>
+
+  <!-- CHEMISTRY INFO -->
+  <div class="rp-sect">
+    <div class="rp-title">CHEMISTRY PROPERTIES</div>
+    <table class="dtbl">
+      <tr><td>Chemistry</td><td class="va" id="ci-name">LFP</td></tr>
+      <tr><td>V nom / max / min</td><td class="v" id="ci-v">—</td></tr>
+      <tr><td>Energy Density</td><td class="v" id="ci-ed">—</td></tr>
+      <tr><td>Cycle Life (80% DoD)</td><td class="vg" id="ci-cl">—</td></tr>
+      <tr><td>Calendar Life</td><td class="v" id="ci-cal">—</td></tr>
+      <tr><td>Base RTE</td><td class="va" id="ci-rte">—</td></tr>
+      <tr><td>TR Threshold</td><td class="vr" id="ci-tr">—</td></tr>
+    </table>
+  </div>
+
+  <!-- REAL-TIME METRICS -->
+  <div class="rp-sect">
+    <div class="rp-title">LIVE TELEMETRY</div>
+    <div class="metric-grid">
+      <div class="metric-card"><div class="mc-lbl">V PACK</div><div class="mc-val" id="rt-vpack" style="color:var(--accent)">—</div></div>
+      <div class="metric-card"><div class="mc-lbl">I PACK</div><div class="mc-val" id="rt-ipack" style="color:var(--green)">—</div></div>
+      <div class="metric-card"><div class="mc-lbl">T CELL</div><div class="mc-val" id="rt-tcell" style="color:var(--teal)">—</div></div>
+      <div class="metric-card"><div class="mc-lbl">HVAC</div><div class="mc-val" id="rt-hvac" style="color:var(--amber)">—</div></div>
+      <div class="metric-card"><div class="mc-lbl">P LOSS</div><div class="mc-val" id="rt-ploss" style="color:var(--red)">—</div></div>
+      <div class="metric-card"><div class="mc-lbl">f GRID</div><div class="mc-val" id="rt-freq" style="color:var(--purple)">—</div></div>
+    </div>
+  </div>
+
+  <!-- ECONOMICS SUMMARY -->
+  <div class="rp-sect">
+    <div class="rp-title">ECONOMICS SUMMARY</div>
+    <div class="rev-row"><span class="rev-lbl">Daily Net Revenue</span><span class="rev-val" id="rs-daily" style="color:var(--green)">—</span></div>
+    <div class="rev-row"><span class="rev-lbl">Annual Revenue</span><span class="rev-val" id="rs-ann" style="color:var(--accent)">—</span></div>
+    <div class="rev-row"><span class="rev-lbl">Total CAPEX</span><span class="rev-val" id="rs-capex">—</span></div>
+    <div class="rev-row"><span class="rev-lbl">NPV</span><span class="rev-val" id="rs-npv">—</span></div>
+    <div class="rev-row"><span class="rev-lbl">IRR</span><span class="rev-val" id="rs-irr">—</span></div>
+    <div class="rev-row"><span class="rev-lbl">LCOE</span><span class="rev-val" id="rs-lcoe" style="color:var(--red)">—</span></div>
+  </div>
+
+  <!-- SIMULATION LOG -->
+  <div class="rp-sect">
+    <div class="rp-title">SIM LOG</div>
+    <div id="simLog" style="font-family:var(--mono);font-size:9px;color:var(--text3);max-height:160px;overflow-y:auto;line-height:1.7"></div>
+  </div>
+
+</div><!-- end right -->
+</div><!-- end content -->
+</div><!-- end app -->
+
+<script>
+/* ============================================================
+   BESS PLANT SIMULATOR — PHYSICS ENGINE v1.0
+   IIT Bombay Grid Integration Lab | StoREin Project
+   All equations: MATLAB-equivalent, peer-reviewed sources
+   ============================================================ */
+
+"use strict";
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 1: CONSTANTS & CHEMISTRY DATABASE
+   ──────────────────────────────────────────────────────────── */
+const CONSTANTS = {
+  F: 96485,        // Faraday constant [C/mol]
+  R: 8.314,        // Gas constant [J/mol/K]
+  T_REF: 298.15,   // Reference temperature [K]
+  Ea_LFP: 30000,   // Activation energy LFP [J/mol]
+  Ea_NMC: 32000,
+  Ea_NCA: 35000,
+  Ea_LTO: 25000,
+  Ea_VRFB: 15000,
+};
+
+const CHEMISTRY_DB = {
+  LFP: {
+    name: "LiFePO₄ (LFP)",
+    V_nom: 3.2, V_max: 3.65, V_min: 2.5,
+    energy_density_wh_kg: 160, energy_density_wh_l: 280,
+    cycle_life_80dod: 6000, calendar_life_yr: 15,
+    Ea: 30000, sigma_cal: 0.035, sigma_cyc: 0.0001,
+    rte_base: 0.93, ri_mohm_ah: 0.8,
+    thermal_runaway_T: 270, cp_j_kg_k: 1000,
+    self_discharge_pct_day: 0.05,
+    color: "#00e676"
+  },
+  NMC: {
+    name: "NMC 811",
+    V_nom: 3.7, V_max: 4.2, V_min: 2.8,
+    energy_density_wh_kg: 250, energy_density_wh_l: 580,
+    cycle_life_80dod: 3000, calendar_life_yr: 10,
+    Ea: 32000, sigma_cal: 0.045, sigma_cyc: 0.00015,
+    rte_base: 0.91, ri_mohm_ah: 1.0,
+    thermal_runaway_T: 210, cp_j_kg_k: 900,
+    self_discharge_pct_day: 0.08,
+    color: "#00d4ff"
+  },
+  NCA: {
+    name: "NCA (Nickel-Cobalt-Aluminum)",
+    V_nom: 3.65, V_max: 4.15, V_min: 2.7,
+    energy_density_wh_kg: 270, energy_density_wh_l: 620,
+    cycle_life_80dod: 2000, calendar_life_yr: 8,
+    Ea: 35000, sigma_cal: 0.055, sigma_cyc: 0.0002,
+    rte_base: 0.90, ri_mohm_ah: 1.1,
+    thermal_runaway_T: 180, cp_j_kg_k: 880,
+    self_discharge_pct_day: 0.10,
+    color: "#ffc107"
+  },
+  VRFB: {
+    name: "Vanadium Redox Flow",
+    V_nom: 1.25, V_max: 1.6, V_min: 0.9,
+    energy_density_wh_kg: 25, energy_density_wh_l: 35,
+    cycle_life_80dod: 20000, calendar_life_yr: 25,
+    Ea: 15000, sigma_cal: 0.010, sigma_cyc: 0.00002,
+    rte_base: 0.78, ri_mohm_ah: 3.5,
+    thermal_runaway_T: 999, cp_j_kg_k: 3900,
+    self_discharge_pct_day: 0.01,
+    color: "#b388ff"
+  },
+  LTO: {
+    name: "Li₄Ti₅O₁₂ (LTO)",
+    V_nom: 2.4, V_max: 2.8, V_min: 1.8,
+    energy_density_wh_kg: 90, energy_density_wh_l: 200,
+    cycle_life_80dod: 20000, calendar_life_yr: 20,
+    Ea: 25000, sigma_cal: 0.020, sigma_cyc: 0.00003,
+    rte_base: 0.96, ri_mohm_ah: 0.5,
+    thermal_runaway_T: 999, cp_j_kg_k: 950,
+    self_discharge_pct_day: 0.03,
+    color: "#ff8a65"
+  },
+  HYBRID_LIC: {
+    name: "Hybrid LIC (SC+Battery)",
+    V_nom: 3.8, V_max: 4.2, V_min: 2.2,
+    energy_density_wh_kg: 45, energy_density_wh_l: 80,
+    cycle_life_80dod: 100000, calendar_life_yr: 20,
+    Ea: 28000, sigma_cal: 0.015, sigma_cyc: 0.000005,
+    rte_base: 0.97, ri_mohm_ah: 0.3,
+    thermal_runaway_T: 999, cp_j_kg_k: 1050,
+    self_discharge_pct_day: 0.20,
+    color: "#00bcd4"
+  }
+};
+
+const INVERTER_DB = {
+  "2L-VSC":  { eff_base: 0.975, thd: 4.5, response_ms: 50,  reactive_cap: 0.3 },
+  "3L-NPC":  { eff_base: 0.982, thd: 2.5, response_ms: 30,  reactive_cap: 0.4 },
+  "MMC":     { eff_base: 0.988, thd: 0.8, response_ms: 10,  reactive_cap: 0.5 },
+  "CHB":     { eff_base: 0.985, thd: 1.2, response_ms: 20,  reactive_cap: 0.45 },
+  "Z-Source":{ eff_base: 0.978, thd: 3.0, response_ms: 40,  reactive_cap: 0.35 },
+};
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 2: ELECTROCHEMISTRY ENGINE
+   Equations: Butler-Volmer, Randles-Sevcik, Peukert, Shepherd
+   ──────────────────────────────────────────────────────────── */
+class ElectrochemEngine {
+  constructor(chem, inp) {
+    this.chem = CHEMISTRY_DB[chem];
+    this.inp = inp;
+    this.soc = inp.soc_init / 100;
+    this.T_cell = inp.T_ambient + 273.15;
+    this.soh = 1.0;
+    this.efc = 0;
+    this.cycleCount = 0;
+  }
+
+  // Open Circuit Voltage — polynomial fit (Shepherd model extended)
+  ocv(soc) {
+    const c = this.chem;
+    const s = Math.max(0.001, Math.min(0.999, soc));
+    // Generic OCV = Vnom + a1*(s-0.5) + a2*ln(s) + a3*ln(1-s)
+    const a1 = (c.V_max - c.V_min) * 0.8;
+    const a2 = 0.02;
+    const a3 = -0.02;
+    return c.V_nom + a1*(s - 0.5) + a2*Math.log(s) + a3*Math.log(1 - s);
+  }
+
+  // Internal resistance — temperature & SOC dependent (Arrhenius)
+  internalResistance(soc, T_K) {
+    const c = this.chem;
+    const R0 = (c.ri_mohm_ah / this.inp.cell_capacity) * 1e-3; // Ohm
+    const arr = Math.exp((c.Ea / CONSTANTS.R) * (1/T_K - 1/CONSTANTS.T_REF));
+    const soc_factor = 1 + 0.5 * Math.pow(soc - 0.5, 2); // bowl shape
+    return R0 * arr * soc_factor * (1 + (1 - this.soh) * 2);
+  }
+
+  // Terminal voltage under load (Butler-Volmer simplified)
+  terminalVoltage(I_A, soc, T_K) {
+    const Ri = this.internalResistance(soc, T_K);
+    const ocv = this.ocv(soc);
+    // Overpotential includes ohmic + charge transfer (linearised BV)
+    const eta_ohm = I_A * Ri;
+    const i0 = 0.5; // exchange current density proxy [A]
+    const alpha = 0.5;
+    const eta_ct = (CONSTANTS.R * T_K) / (alpha * CONSTANTS.F) * Math.asinh(I_A / (2 * i0));
+    return ocv - eta_ohm - eta_ct;
+  }
+
+  // Peukert corrected capacity
+  peukertCapacity(I_A, n_peukert = 1.05) {
+    const I_1C = this.inp.cell_capacity; // 1C current
+    return this.inp.cell_capacity * Math.pow(I_1C / Math.max(I_A, 0.001), n_peukert - 1);
+  }
+
+  // Step simulation: dt seconds, P_MW power demand (+ = discharge)
+  step(P_MW, dt_s) {
+    const c = this.chem;
+    const inp = this.inp;
+
+    // Total pack current
+    const n_series = inp.cells_series;
+    const n_parallel = inp.cells_parallel;
+    const V_pack = this.terminalVoltage(0, this.soc, this.T_cell) * n_series;
+    const I_pack = (P_MW * 1e6) / Math.max(V_pack, 1);
+    const I_cell = I_pack / n_parallel;
+
+    // Voltage & power
+    const V_cell = this.terminalVoltage(I_cell, this.soc, this.T_cell);
+    const V_pack_actual = V_cell * n_series;
+    const P_actual = V_pack_actual * I_pack / 1e6; // MW
+
+    // SOC update — coulomb counting with Peukert
+    const Q_cell_As = this.peukertCapacity(Math.abs(I_cell)) * 3600 * this.soh;
+    const dSOC = -(I_cell * dt_s) / Q_cell_As;
+    this.soc = Math.max(inp.soc_min/100, Math.min(inp.soc_max/100, this.soc + dSOC));
+
+    // EFC accumulation
+    this.efc += Math.abs(I_cell * dt_s) / (Q_cell_As * 2);
+
+    // Heat generation: Q = I²R + overpotential losses
+    const Ri = this.internalResistance(this.soc, this.T_cell);
+    const Q_heat_W_cell = I_cell * I_cell * Ri + Math.abs(I_cell) * 0.05;
+
+    return {
+      soc: this.soc * 100,
+      V_pack: V_pack_actual,
+      I_pack,
+      P_actual_MW: P_actual,
+      Q_heat_W_cell,
+      V_cell,
+      I_cell,
+      Ri_mohm: Ri * 1000,
+      efc: this.efc
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 3: THERMAL MODEL
+   Lumped thermal: Bernardi heat equation + HVAC PID control
+   ──────────────────────────────────────────────────────────── */
+class ThermalEngine {
+  constructor(inp) {
+    this.inp = inp;
+    this.T_cell = inp.T_ambient;    // °C
+    this.T_module = inp.T_ambient;
+    this.T_container = inp.T_ambient;
+    this.hvac_power_kW = 0;
+    this.pid_integral = 0;
+    this.pid_prev_err = 0;
+    // PID gains for HVAC
+    this.Kp = 2.0; this.Ki = 0.1; this.Kd = 0.5;
+  }
+
+  step(Q_heat_W_total, dt_s) {
+    const inp = this.inp;
+    const chem = CHEMISTRY_DB[inp.chemistry];
+
+    // Cell thermal mass
+    const m_cell_kg = (inp.cell_capacity * inp.cell_voltage * 3.6e-3) / (chem.energy_density_wh_kg / 1000);
+    const C_thermal_cell = m_cell_kg * chem.cp_j_kg_k;
+
+    // Module thermal resistance (cell→module) [K/W]
+    const R_th_cm = 0.02;
+    // Module→container
+    const R_th_mc = 0.05;
+    // Container→ambient (includes HVAC)
+    const HVAC_cop = 3.0; // coefficient of performance
+    const Q_hvac_W = this.hvac_power_kW * 1000 * HVAC_cop;
+    const R_th_ca = 0.1;
+
+    // Cell temperature (Bernardi heat equation)
+    const dT_cell = (Q_heat_W_total - (this.T_cell - this.T_module) / R_th_cm) / (C_thermal_cell * inp.total_cells);
+    this.T_cell += dT_cell * dt_s;
+
+    // Module temperature
+    const Q_out_module = (this.T_cell - this.T_module) / R_th_cm - (this.T_module - this.T_container) / R_th_mc;
+    this.T_module += (Q_out_module / (C_thermal_cell * inp.total_cells * 1.2)) * dt_s;
+
+    // Container temperature with HVAC cooling
+    const Q_out_container = (this.T_module - this.T_container) / R_th_mc - Q_hvac_W - (this.T_container - inp.T_ambient) / R_th_ca;
+    this.T_container += (Q_out_container / (m_cell_kg * inp.total_cells * chem.cp_j_kg_k * 1.5)) * dt_s;
+
+    // PID HVAC control
+    const setpoint = inp.T_hvac_setpoint;
+    const err = this.T_cell - setpoint;
+    this.pid_integral += err * dt_s;
+    const d_err = (err - this.pid_prev_err) / dt_s;
+    const pid_out = this.Kp * err + this.Ki * this.pid_integral + this.Kd * d_err;
+    this.hvac_power_kW = Math.max(0, Math.min(inp.hvac_capacity_kw, pid_out));
+    this.pid_prev_err = err;
+
+    // Thermal runaway risk
+    const TR_T = chem.thermal_runaway_T;
+    const risk = this.T_cell < TR_T * 0.7 ? "LOW" :
+                 this.T_cell < TR_T * 0.85 ? "MEDIUM" :
+                 this.T_cell < TR_T * 0.95 ? "HIGH" : "CRITICAL";
+
+    return {
+      T_cell: this.T_cell,
+      T_module: this.T_module,
+      T_container: this.T_container,
+      hvac_kW: this.hvac_power_kW,
+      thermal_risk: risk,
+      Q_heat_W: Q_heat_W_total,
+      dT: dT_cell
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 4: POWER ELECTRONICS / GRID INTERFACE
+   PCS: VSC model, PWM losses, transformer, reactive power
+   ──────────────────────────────────────────────────────────── */
+class PowerElectronicsEngine {
+  constructor(inp) {
+    this.inp = inp;
+    this.inv = INVERTER_DB[inp.inverter_type] || INVERTER_DB["3L-NPC"];
+    this.freq = inp.grid_freq;
+    this.V_dc = inp.dc_bus_voltage;
+    this.P_out = 0;
+    this.Q_out = 0;
+    this.f_grid = inp.grid_freq;
+    this.df = 0;  // frequency deviation
+    this.V_grid = inp.ac_voltage_kv * 1000;
+  }
+
+  // Converter efficiency curve (Sandia model)
+  converterEfficiency(P_pu) {
+    const inv = this.inv;
+    const p = Math.abs(P_pu);
+    if (p < 0.001) return inv.eff_base; // return rated efficiency at no-load, not 0
+    const eff = inv.eff_base - 0.03 * Math.pow(p - 0.8, 2) - 0.01 * (1 - p);
+    return Math.max(0.7, Math.min(0.999, eff));
+  }
+
+  // Transformer losses (IEC 60076)
+  transformerLosses(P_MW) {
+    const rating = this.inp.rated_power_mw;
+    const P_fe = rating * 0.002;  // Iron (core) losses [MW] — constant
+    const P_cu = rating * 0.008 * Math.pow(P_MW / Math.max(rating, 0.001), 2); // Copper losses
+    return P_fe + P_cu;
+  }
+
+  // Grid frequency response — droop control
+  frequencyDroop(f_actual) {
+    const f0 = this.inp.grid_freq;
+    const df = f_actual - f0;
+    this.df = df;
+    const droop = 0.04; // 4% droop
+    const deadband = 0.015; // ±15 mHz
+    if (Math.abs(df) <= deadband) return 0;
+    const dP_pu = -(df - Math.sign(df) * deadband) / (f0 * droop);
+    return Math.max(-1, Math.min(1, dP_pu)) * this.inp.rated_power_mw;
+  }
+
+  // Reactive power capability — P-Q diagram ellipse
+  reactiveCapability(P_MW) {
+    const S_rated = this.inp.rated_power_mw;
+    const Q_max = Math.sqrt(Math.max(0, S_rated * S_rated - P_MW * P_MW)) * this.inv.reactive_cap;
+    return Q_max;
+  }
+
+  step(P_demand_MW, f_actual, pf_setpoint) {
+    const inv = this.inv;
+    const P_pu = P_demand_MW / this.inp.rated_power_mw;
+    const eff = this.converterEfficiency(P_pu);
+
+    // DC-AC conversion
+    const P_ac = P_demand_MW > 0
+      ? P_demand_MW * eff          // discharge: battery → grid
+      : P_demand_MW / eff;         // charge: grid → battery (more drawn from grid)
+
+    const dP_freq = this.frequencyDroop(f_actual);
+    const P_total = (isFinite(P_ac) ? P_ac : 0) + (isFinite(dP_freq) ? dP_freq : 0);
+    const P_xfmr = this.transformerLosses(Math.abs(P_total));
+    const Q_max = this.reactiveCapability(Math.abs(P_total));
+    const pf = Math.max(0.8, Math.min(1.0, pf_setpoint));
+    const Q = Math.abs(P_total) > 0.001 ? P_total * Math.tan(Math.acos(pf)) : 0;
+    const Q_limited = Math.max(-Q_max, Math.min(Q_max, isFinite(Q) ? Q : 0));
+    const thd_loss = (inv.thd / 100) * 0.001 * Math.abs(P_pu);
+    const P_aux_MW = 0.003 * this.inp.rated_power_mw;
+    const P_out = P_total - P_xfmr - thd_loss * this.inp.rated_power_mw;
+    this.P_out = isFinite(P_out) ? P_out : 0;
+    this.Q_out = Q_limited;
+
+    return {
+      P_ac_MW: isFinite(P_ac) ? P_ac : 0,
+      P_grid_MW: this.P_out,
+      Q_MVAR: Q_limited,
+      eff_pct: eff * 100,
+      P_xfmr_MW: isFinite(P_xfmr) ? P_xfmr : 0,
+      P_aux_MW,
+      df_mHz: isFinite(this.df) ? this.df * 1000 : 0,
+      dP_freq_MW: isFinite(dP_freq) ? dP_freq : 0,
+      thd_pct: inv.thd,
+      response_ms: inv.response_ms,
+      modulation_index: Math.min(1, Math.abs(P_pu) * 1.05),
+      S_MVA: Math.sqrt(this.P_out**2 + Q_limited**2)
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 5: DEGRADATION ENGINE
+   Calendar + Cycle ageing (Arrhenius + Wang model)
+   ──────────────────────────────────────────────────────────── */
+class DegradationEngine {
+  constructor(chem, inp) {
+    this.chem = CHEMISTRY_DB[chem];
+    this.inp = inp;
+    this.capacity_fade = 0;    // fractional [0-1]
+    this.resistance_rise = 0;  // fractional [0-1]
+    this.soh_capacity = 1.0;
+    this.soh_power = 1.0;
+    this.total_Ah = 0;
+    this.total_days = 0;
+  }
+
+  // Arrhenius calendar ageing [Wang 2014, Journal of Power Sources]
+  calendarAgeing(T_K, dt_days) {
+    const c = this.chem;
+    const k_cal = c.sigma_cal * Math.exp(-c.Ea / (CONSTANTS.R * T_K))
+                              * Math.exp(c.Ea / (CONSTANTS.R * CONSTANTS.T_REF));
+    const dQ_cal = k_cal * Math.sqrt(dt_days);
+    return dQ_cal;
+  }
+
+  // Cycle ageing — DOD and C-rate dependent (modified Wang)
+  cycleAgeing(dod_frac, C_rate, T_K) {
+    const c = this.chem;
+    // Stress factors
+    const f_dod = Math.pow(dod_frac, 1.4);
+    const f_crate = 1 + 0.5 * Math.max(0, C_rate - 1.0);
+    const f_temp = Math.exp(-c.Ea / (CONSTANTS.R * T_K))
+                 / Math.exp(-c.Ea / (CONSTANTS.R * CONSTANTS.T_REF));
+    const dQ_cyc = c.sigma_cyc * f_dod * f_crate * f_temp;
+    return dQ_cyc;
+  }
+
+  step(T_cell_C, dod_frac, C_rate, dt_days, Ah_throughput) {
+    const T_K = T_cell_C + 273.15;
+    const dQ_cal = this.calendarAgeing(T_K, dt_days);
+    const dQ_cyc = this.cycleAgeing(dod_frac, C_rate, T_K) * Ah_throughput / this.inp.cell_capacity;
+
+    this.capacity_fade = Math.min(0.4, this.capacity_fade + dQ_cal + dQ_cyc);
+    this.resistance_rise = Math.min(2.0, this.resistance_rise + (dQ_cal + dQ_cyc) * 2.5);
+    this.total_Ah += Ah_throughput;
+    this.total_days += dt_days;
+
+    this.soh_capacity = Math.max(0, 1 - this.capacity_fade);
+    this.soh_power = Math.max(0, 1 / (1 + this.resistance_rise));
+
+    // End-of-life estimation
+    const fade_rate = this.capacity_fade / Math.max(this.total_days, 1);
+    const days_to_eol_80 = (0.20 - this.capacity_fade) / Math.max(fade_rate, 1e-10);
+    const days_to_eol_70 = (0.30 - this.capacity_fade) / Math.max(fade_rate, 1e-10);
+
+    return {
+      soh_capacity: this.soh_capacity * 100,
+      soh_power: this.soh_power * 100,
+      capacity_fade_pct: this.capacity_fade * 100,
+      resistance_rise_pct: this.resistance_rise * 100,
+      total_Ah_throughput: this.total_Ah,
+      total_days: this.total_days,
+      days_to_eol_80: Math.max(0, days_to_eol_80),
+      years_to_eol_80: Math.max(0, days_to_eol_80 / 365),
+      years_to_eol_70: Math.max(0, days_to_eol_70 / 365),
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 6: DISPATCH & REVENUE OPTIMISER
+   MILP-lite: rule-based with time-of-use, FFR, arbitrage
+   ──────────────────────────────────────────────────────────── */
+class DispatchEngine {
+  constructor(inp) {
+    this.inp = inp;
+    this.mode = inp.op_mode;
+  }
+
+  // India grid typical load curve (24h, normalized)
+  gridLoadProfile(h) {
+    const curve = [0.55, 0.50, 0.48, 0.47, 0.48, 0.52,
+                   0.60, 0.72, 0.88, 0.95, 0.98, 1.00,
+                   0.97, 0.95, 0.93, 0.90, 0.92, 0.97,
+                   1.00, 0.98, 0.95, 0.88, 0.75, 0.62];
+    return curve[h % 24];
+  }
+
+  // Dynamic electricity price [₹/kWh] based on hour
+  spotPrice(h, tariffLow, tariffHigh) {
+    const load = this.gridLoadProfile(h);
+    return tariffLow + (tariffHigh - tariffLow) * Math.pow(load, 2);
+  }
+
+  // Grid frequency simulation (Ornstein-Uhlenbeck process)
+  simulateFrequency(f_prev, dt_s) {
+    const f0 = this.inp.grid_freq;
+    const theta = 0.5;   // mean reversion speed
+    const sigma = 0.08;  // volatility [Hz]
+    const noise = (Math.random() - 0.5) * 2 * sigma * Math.sqrt(dt_s);
+    return f0 + (f_prev - f0) * Math.exp(-theta * dt_s) + noise;
+  }
+
+  // Dispatch decision: returns P_demand in MW (+ = discharge, - = charge)
+  dispatch(h, soc_pct, soh, f_grid, inp) {
+    const soc = soc_pct / 100;
+    const P_max = inp.rated_power_mw * soh / 100;
+
+    switch (this.mode) {
+      case "FREQ": {
+        // FFR: respond to frequency deviation, hold otherwise
+        const df = f_grid - inp.grid_freq;
+        if (Math.abs(df) > 0.05) return -Math.sign(df) * P_max * Math.min(1, Math.abs(df) / 0.5);
+        // Also do light arbitrage when not in freq response
+        return this._arbitrage(h, soc, P_max, inp) * 0.3;
+      }
+      case "PEAK": {
+        const load = this.gridLoadProfile(h);
+        if (load > 0.90 && soc > 0.25) return P_max * Math.min(1, (load - 0.90) / 0.10);
+        if (load < 0.60 && soc < 0.90) return -P_max * 0.7;
+        return 0;
+      }
+      case "ARB":
+        return this._arbitrage(h, soc, P_max, inp);
+      case "VPP": {
+        // Aggregate with solar/wind: charge midday, discharge evening
+        if (h >= 10 && h <= 15 && soc < 0.90) return -P_max;
+        if ((h >= 18 && h <= 22) && soc > 0.20) return P_max;
+        return 0;
+      }
+      case "UPS":
+        return 0; // standby, only discharge on fault signal
+      case "VOLT": {
+        // Q-priority: mostly reactive, small P
+        if (soc > 0.50 && soc < 0.80) return P_max * 0.1;
+        if (soc >= 0.80) return P_max * 0.5;
+        return -P_max * 0.3;
+      }
+      default:
+        return 0;
+    }
+  }
+
+  _arbitrage(h, soc, P_max, inp) {
+    const price = this.spotPrice(h, inp.tariff_low, inp.tariff_high);
+    const mid = (inp.tariff_low + inp.tariff_high) / 2;
+    if (price < mid * 0.85 && soc < 0.90) return -P_max;
+    if (price > mid * 1.15 && soc > 0.15) return P_max;
+    return 0;
+  }
+
+  // 24-hour financial simulation
+  simulate24h(inp, soc_init_pct) {
+    const results = [];
+    let soc = soc_init_pct;
+    let revenue = 0, cost = 0;
+    let f_grid = inp.grid_freq;
+    const dt = 3600; // 1-hour steps
+
+    for (let h = 0; h < 24; h++) {
+      f_grid = this.simulateFrequency(f_grid, dt);
+      const P = this.dispatch(h, soc, 100, f_grid, inp);
+      const price = this.spotPrice(h, inp.tariff_low, inp.tariff_high);
+      const energy = Math.abs(P) * 1; // MWh per hour
+
+      if (P > 0) revenue += energy * price * 1000 * (inp.rte / 100);   // sell
+      else cost += energy * price * 1000 / (inp.rte / 100);           // buy
+
+      // Simple SOC update for dispatch sim
+      const dSOC = -(P / inp.rated_power_mw) * (inp.rated_power_mw / (inp.energy_capacity_mwh * inp.dod / 100)) * 100;
+      soc = Math.max(inp.soc_min, Math.min(inp.soc_max, soc + dSOC));
+
+      results.push({ h, P, soc, price, f_grid, revenue_cumulative: revenue - cost });
+    }
+    return { hourly: results, daily_revenue: revenue, daily_cost: cost, daily_net: revenue - cost };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 7: FAULT SIMULATOR & PROTECTION
+   Overcurrent, ground fault, thermal runaway, BMS faults
+   ──────────────────────────────────────────────────────────── */
+class FaultEngine {
+  constructor(inp) {
+    this.inp = inp;
+    this.faults = [];
+    this.protection_active = false;
+    this.trip_count = 0;
+  }
+
+  // Protection relay: 51 (overcurrent), 27/59 (under/overvoltage), 81 (freq), 87 (diff)
+  checkProtection(I_pack, V_pack, f_grid, T_cell, soc) {
+    const trips = [];
+    const inp = this.inp;
+
+    // RELAY 51 — Overcurrent
+    const I_rated = inp.rated_power_mw * 1e6 / Math.max(inp.dc_bus_voltage, 1);
+    if (Math.abs(I_pack) > I_rated * 1.25) trips.push({ relay: "51-OC", msg: "Overcurrent trip", severity: "CRITICAL" });
+
+    // RELAY 59 — Overvoltage DC
+    if (V_pack > inp.dc_bus_voltage * 1.10) trips.push({ relay: "59-OV", msg: "DC overvoltage", severity: "HIGH" });
+
+    // RELAY 27 — Undervoltage DC
+    if (V_pack < inp.dc_bus_voltage * 0.85 && soc > 0.2) trips.push({ relay: "27-UV", msg: "DC undervoltage", severity: "HIGH" });
+
+    // RELAY 81O/U — Frequency out of range
+    if (f_grid > inp.grid_freq + 2.0) trips.push({ relay: "81O", msg: "Overfrequency — islanding suspected", severity: "HIGH" });
+    if (f_grid < inp.grid_freq - 2.0) trips.push({ relay: "81U", msg: "Underfrequency — grid disturbance", severity: "CRITICAL" });
+
+    // THERMAL — BMS cut-off
+    const chem = CHEMISTRY_DB[inp.chemistry];
+    if (T_cell > chem.thermal_runaway_T * 0.90) trips.push({ relay: "BMS-TH", msg: "Thermal cut-off imminent", severity: "CRITICAL" });
+    if (T_cell > 55) trips.push({ relay: "BMS-OT", msg: "Cell over-temperature warning", severity: "MEDIUM" });
+
+    // SOC limits
+    if (soc * 100 > inp.soc_max) trips.push({ relay: "BMS-OC", msg: "SOC upper limit reached", severity: "LOW" });
+    if (soc * 100 < inp.soc_min) trips.push({ relay: "BMS-UD", msg: "SOC lower limit reached", severity: "LOW" });
+
+    if (trips.length > 0) {
+      this.protection_active = true;
+      this.trip_count += trips.length;
+      trips.forEach(t => {
+        t.timestamp = new Date().toLocaleTimeString();
+        this.faults.unshift(t);
+      });
+      if (this.faults.length > 20) this.faults = this.faults.slice(0, 20);
+    } else {
+      this.protection_active = false;
+    }
+
+    return trips;
+  }
+
+  // Inject random fault for testing
+  injectFault(type) {
+    const faults = {
+      "ground_fault": { relay: "64-GF", msg: "Ground fault detected — insulation failure", severity: "CRITICAL" },
+      "cell_imbalance": { relay: "BMS-IMB", msg: "Cell voltage imbalance > 50mV", severity: "MEDIUM" },
+      "comm_loss": { relay: "COM-01", msg: "BMS communication loss on Rack 7", severity: "HIGH" },
+      "contactor_fail": { relay: "SYS-CTR", msg: "Main DC contactor failure", severity: "CRITICAL" },
+      "cooling_fail": { relay: "THM-01", msg: "HVAC unit failure — cooling loss", severity: "HIGH" },
+    };
+    const f = faults[type] || { relay: "UNK", msg: "Unknown fault", severity: "MEDIUM" };
+    f.timestamp = new Date().toLocaleTimeString();
+    this.faults.unshift(f);
+    if (this.faults.length > 20) this.faults = this.faults.slice(0, 20);
+  }
+
+  clearFaults() { this.faults = []; this.protection_active = false; this.trip_count = 0; }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 8: FINANCIAL ENGINE
+   NPV, IRR, LCOE, sensitivity — full project lifecycle
+   ──────────────────────────────────────────────────────────── */
+class FinancialEngine {
+  constructor(inp) { this.inp = inp; }
+
+  computeCapex() {
+    const inp = this.inp;
+    const battery_cost = inp.capex_per_mwh * inp.energy_capacity_mwh * 1e7; // ₹
+    const pcs_cost = inp.rated_power_mw * 0.4e7;
+    const bop_cost = (battery_cost + pcs_cost) * 0.15;
+    const epc_cost = (battery_cost + pcs_cost + bop_cost) * 0.10;
+    const contingency = (battery_cost + pcs_cost + bop_cost + epc_cost) * 0.05;
+    return { battery_cost, pcs_cost, bop_cost, epc_cost, contingency,
+             total: battery_cost + pcs_cost + bop_cost + epc_cost + contingency };
+  }
+
+  npv(cashflows, rate) {
+    return cashflows.reduce((acc, cf, i) => acc + cf / Math.pow(1 + rate, i + 1), 0);
+  }
+
+  irr(cashflows, capex) {
+    // Newton-Raphson IRR
+    let r = 0.10;
+    for (let iter = 0; iter < 100; iter++) {
+      let f = -capex, df = 0;
+      cashflows.forEach((cf, i) => {
+        f  += cf / Math.pow(1 + r, i + 1);
+        df -= (i + 1) * cf / Math.pow(1 + r, i + 2);
+      });
+      const r_new = r - f / df;
+      if (Math.abs(r_new - r) < 1e-6) { r = r_new; break; }
+      r = r_new;
+    }
+    return Math.max(-1, Math.min(1, r));
+  }
+
+  lcoe(capex_total, annual_opex, annual_energy_mwh, project_years, discount_rate) {
+    let pv_cost = capex_total, pv_energy = 0;
+    let energy = annual_energy_mwh;
+    for (let y = 1; y <= project_years; y++) {
+      pv_cost += annual_opex / Math.pow(1 + discount_rate, y);
+      pv_energy += energy / Math.pow(1 + discount_rate, y);
+      energy *= 0.995; // 0.5% degradation per year
+    }
+    return (pv_cost / Math.max(pv_energy * 1000, 1)); // ₹/kWh
+  }
+
+  fullAnalysis(daily_revenue_inr) {
+    const inp = this.inp;
+    const capex = this.computeCapex();
+    const annual_rev = daily_revenue_inr * 365;
+    const annual_opex = inp.opex_per_mw_lakh * inp.rated_power_mw * 1e5; // ₹
+    const battery_replacement_yr = Math.round(inp.cycle_life / (365 * inp.c_rate * 0.8));
+
+    const cashflows = [];
+    let net = annual_rev - annual_opex;
+    for (let y = 1; y <= inp.project_life; y++) {
+      let cf = net;
+      // Battery replacement cost in replacement year
+      if (y === battery_replacement_yr && battery_replacement_yr <= inp.project_life) {
+        cf -= capex.battery_cost * 0.65; // replacement at 65% of new cost
+      }
+      cashflows.push(cf);
+      net *= 0.995;
+    }
+
+    const disc = inp.discount_rate / 100;
+    const npv_val = this.npv(cashflows, disc) - capex.total;
+    const irr_val = this.irr(cashflows, capex.total);
+    const annual_energy = inp.energy_capacity_mwh * inp.dod / 100 * 365 * 1.5;
+    const lcoe_val = this.lcoe(capex.total, annual_opex, annual_energy, inp.project_life, disc);
+    const payback = capex.total / Math.max(annual_rev - annual_opex, 1) / 365 * 365; // years
+
+    return {
+      capex, annual_rev, annual_opex, cashflows, npv_val,
+      irr_pct: irr_val * 100, lcoe_inr_kwh: lcoe_val,
+      payback_yr: payback, battery_replacement_yr,
+      daily_net: daily_revenue_inr
+    };
+  }
+}
+
+/* ────────────────────────────────────────────────────────────
+   MODULE 9: PACK CONFIGURATOR
+   ──────────────────────────────────────────────────────────── */
+function configurePackage(inp) {
+  const chem = CHEMISTRY_DB[inp.chemistry];
+  const cell_V = inp.cell_voltage || chem.V_nom;
+  const cell_Ah = inp.cell_capacity;
+
+  // String voltage = cells_series * V_cell
+  const string_V = inp.cells_series * cell_V;
+  // Strings in parallel per rack
+  const rack_Ah = inp.cells_parallel * cell_Ah;
+  const rack_energy_kWh = string_V * rack_Ah / 1000;
+  const energy_needed_kWh = inp.energy_capacity_mwh * 1000;
+  const total_racks = Math.ceil(energy_needed_kWh / Math.max(rack_energy_kWh, 0.1));
+  const total_cells = inp.cells_series * inp.cells_parallel * total_racks;
+
+  // Container sizing (20ft = ~500kWh, 40ft = ~1MWh typically)
+  const containers_40ft = Math.ceil(energy_needed_kWh / 1000);
+  const pcs_units = Math.ceil(inp.rated_power_mw / 2); // 2MW per PCS unit typical
+
+  // Mass & footprint
+  const cell_wh = cell_V * cell_Ah;
+  const mass_per_cell_kg = cell_wh / (chem.energy_density_wh_kg * 0.9);
+  const vol_per_cell_l = cell_wh / (chem.energy_density_wh_l * 0.9);
+  const total_mass_t = (total_cells * mass_per_cell_kg) / 1000;
+  const footprint_m2 = containers_40ft * 15 * 2.5 + pcs_units * 10;
+
+  // Total DC bus energy vs actual cell configuration energy
+  const configured_energy_kWh = total_racks * rack_energy_kWh;
+
+  return {
+    string_V, rack_Ah, rack_energy_kWh,
+    total_racks, total_cells, containers_40ft, pcs_units,
+    total_mass_t, footprint_m2, configured_energy_kWh,
+    cells_per_string: inp.cells_series,
+    strings_per_rack: inp.cells_parallel,
+    spec_energy_Wh_kg: chem.energy_density_wh_kg,
+    spec_energy_Wh_L: chem.energy_density_wh_l,
+    effective_cap_kWh: configured_energy_kWh * inp.dod / 100
+  };
+}
+
+/* ────────────────────────────────────────────────────────────
+   EXPORTS — available as window.BESSEngine
+   ──────────────────────────────────────────────────────────── */
+window.BESSEngine = {
+  CHEMISTRY_DB, INVERTER_DB, CONSTANTS,
+  ElectrochemEngine, ThermalEngine, PowerElectronicsEngine,
+  DegradationEngine, DispatchEngine, FaultEngine,
+  FinancialEngine, configurePackage
+};
+
+</script>
+<script>
+/* ══════════════════════════════════════════════════════════
+   UI CONTROLLER
+══════════════════════════════════════════════════════════ */
+const E = window.BESSEngine;
+let engines = null;
+let simRunning = false;
+let simInterval = null;
+let simTime = 0; // seconds
+let simDay = 0;
+
+// Chart instances
+let charts = {};
+
+// Ring buffers for live charts
+const RING = 120;
+const mkRing = () => Array(RING).fill(0);
+let rings = {
+  soc:mkRing(), power:mkRing(), temp_cell:mkRing(), temp_mod:mkRing(),
+  temp_cont:mkRing(), hvac:mkRing(), qheat:mkRing(),
+  freq:mkRing(), vpack:mkRing(), ipack:mkRing(),
+  vi_v:mkRing(), vi_i:mkRing(),
+};
+let ringIdx = 0;
+
+/* ── UTILS ── */
+function rr(id,outId,unit) {
+  const v = parseFloat(document.getElementById(id).value);
+  document.getElementById(outId).textContent = v.toFixed(unit==='C'?2:unit==='%/d'?2:0) + unit;
+}
+function toggleSect(hd) {
+  const body = hd.nextElementSibling;
+  body.classList.toggle('collapsed');
+}
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+function log(msg) {
+  const el = document.getElementById('simLog');
+  const t = new Date().toLocaleTimeString('en-IN',{hour12:false});
+  el.innerHTML = `<div>[${t}] ${msg}</div>` + el.innerHTML;
+}
+
+/* ── GATHER INPUTS ── */
+function getInp() {
+  const g = id => document.getElementById(id);
+  return {
+    chemistry: g('chemistry').value,
+    inverter_type: g('inverterType').value,
+    op_mode: g('opMode').value,
+    rated_power_mw: parseFloat(g('rPow').value),
+    energy_capacity_mwh: parseFloat(g('rEn').value),
+    dc_bus_voltage: parseFloat(g('dcBus').value),
+    ac_voltage_kv: parseFloat(g('acKV').value),
+    grid_freq: parseFloat(g('gridFreq').value),
+    pf: parseFloat(g('pf').value),
+    soc_init: parseFloat(g('socInit').value),
+    cell_voltage: parseFloat(g('cellV').value),
+    cell_capacity: parseFloat(g('cellAh').value),
+    cells_series: parseInt(g('cellS').value),
+    cells_parallel: parseInt(g('cellP').value),
+    c_rate: parseFloat(g('cRate').value),
+    self_discharge_pct_day: parseFloat(g('selfD').value),
+    T_ambient: parseFloat(g('ambT').value),
+    T_hvac_setpoint: parseFloat(g('hvacSet').value),
+    hvac_capacity_kw: parseFloat(g('hvacCap').value),
+    soc_min: parseFloat(g('socMin').value),
+    soc_max: parseFloat(g('socMax').value),
+    dod: parseFloat(g('dod').value),
+    cycle_life: parseInt(g('cycleLife').value),
+    calendar_life_yr: parseInt(g('calLife').value),
+    project_life: parseInt(g('projLife').value),
+    discount_rate: parseFloat(g('discRate').value),
+    capex_per_mwh: parseFloat(g('capexBatt').value),
+    opex_per_mw_lakh: parseFloat(g('opexMW').value),
+    tariff_low: parseFloat(g('tarLow').value),
+    tariff_high: parseFloat(g('tarHigh').value),
+    rte: E.CHEMISTRY_DB[g('chemistry').value]?.rte_base * 100 || 90,
+    total_cells: 1000 // placeholder, updated below
+  };
+}
+
+/* ── INITIALISE ENGINES ── */
+function initEngines(inp) {
+  const pack = E.configurePackage(inp);
+  inp.total_cells = pack.total_cells;
+  engines = {
+    ec: new E.ElectrochemEngine(inp.chemistry, inp),
+    th: new E.ThermalEngine(inp),
+    pe: new E.PowerElectronicsEngine(inp),
+    deg: new E.DegradationEngine(inp.chemistry, inp),
+    disp: new E.DispatchEngine(inp),
+    fault: new E.FaultEngine(inp),
+    fin: new E.FinancialEngine(inp),
+    pack, inp
+  };
+  log(`Engines initialised — Chemistry: ${inp.chemistry}, Mode: ${inp.op_mode}`);
+}
+
+/* ── STATIC CHARTS (run once) ── */
+function buildStaticCharts(inp) {
+  // Temporarily show all tab panels so Chart.js can measure canvas dimensions
+  const allTabs = document.querySelectorAll('.tab-content');
+  allTabs.forEach(t => { t.style.display = 'flex'; t.style.visibility = 'hidden'; });
+
+  const chem = E.CHEMISTRY_DB[inp.chemistry];
+  const ec_tmp = new E.ElectrochemEngine(inp.chemistry, inp);
+
+  // OCV curve
+  const socPts = Array.from({length:101},(_,i)=>i);
+  const ocvPts = socPts.map(s => ec_tmp.ocv(s/100).toFixed(4));
+  mkChart('cOCV','line', socPts, [{
+    label:'OCV (V)', data:ocvPts, borderColor:'#00e5a0',
+    backgroundColor:'rgba(0,229,160,.08)', fill:true, tension:.4, borderWidth:2, pointRadius:0
+  }], {xLabel:'SOC (%)', yLabel:'OCV (V)'});
+
+  // Ri curve
+  const riPts = socPts.map(s => (ec_tmp.internalResistance(s/100, 298.15)*1000).toFixed(4));
+  mkChart('cRi','line', socPts, [{
+    label:'Ri (mΩ)', data:riPts, borderColor:'#ffb830',
+    backgroundColor:'rgba(255,184,48,.08)', fill:true, tension:.4, borderWidth:2, pointRadius:0
+  }], {xLabel:'SOC (%)', yLabel:'Ri (mΩ)'});
+
+  // 24hr dispatch
+  build24hChart(inp);
+
+  // Degradation projection
+  buildFadeChart(inp);
+
+  // Loss doughnut
+  buildLossChart(inp);
+
+  // PQ diagram
+  buildPQChart(inp);
+
+  // Cashflow + capex
+  buildFinanceCharts(inp);
+
+  // Freq (initially flat)
+  buildFreqChart();
+
+  // Restore tab display — only active tab stays visible
+  allTabs.forEach(t => { t.style.display = ''; t.style.visibility = ''; });
+  document.querySelector('.tab-content.active').style.display = 'flex';
+
+  // Live charts init
+  buildLiveChart('cVI', ['V cell (V)', 'I cell (A)'], ['#00c8ff','#00e5a0']);
+  buildLiveChart('cTemp', ['T Cell', 'T Module', 'T Container'], ['#ff4757','#ffb830','#00c8ff']);
+  buildLiveChart('cHVAC', ['HVAC (kW)', 'Q Heat (W/1000)'], ['#00d4c8','#ff4757']);
+}
+
+function build24hChart(inp) {
+  const disp = new E.DispatchEngine(inp);
+  const res = disp.simulate24h(inp, inp.soc_init);
+  const h = res.hourly;
+  const labels = h.map(r => r.h + 'h');
+  mkChart('cDisp','line', labels, [
+    {label:'SOC (%)', data:h.map(r=>r.soc.toFixed(1)), borderColor:'#00e5a0', fill:false, tension:.4, borderWidth:2, pointRadius:2, yAxisID:'y1'},
+    {label:'Power (MW)', data:h.map(r=>r.P.toFixed(1)), borderColor:'#00c8ff', fill:false, tension:.3, borderWidth:1.5, borderDash:[4,3], pointRadius:0, yAxisID:'y2'},
+    {label:'Price (₹/kWh)', data:h.map(r=>r.price.toFixed(2)), borderColor:'#ffb830', fill:false, tension:.4, borderWidth:1.5, borderDash:[2,4], pointRadius:0, yAxisID:'y3'},
+  ], {multiAxis:true, yLabel:'SOC / Power'});
+
+  // Update fin using dispatch result
+  if (engines) {
+    const fin = engines.fin.fullAnalysis(res.daily_net);
+    updateFinanceUI(fin);
+  }
+}
+
+function buildFadeChart(inp) {
+  const deg_tmp = new E.DegradationEngine(inp.chemistry, inp);
+  const yrs = Array.from({length:inp.project_life+1},(_,i)=>i);
+  const soh = [100];
+  for (let y = 1; y <= inp.project_life; y++) {
+    deg_tmp.step(inp.T_ambient, inp.dod/100, inp.c_rate, 365, inp.cell_capacity * inp.c_rate * 365);
+    soh.push(parseFloat((deg_tmp.soh_capacity*100).toFixed(2)));
+  }
+  mkChart('cFade','line', yrs.map(y=>'Y'+y), [{
+    label:'SOH (%)', data:soh, borderColor:'#00e5a0',
+    backgroundColor:'rgba(0,229,160,.06)', fill:true, tension:.4, borderWidth:2, pointRadius:2
+  },{
+    label:'EoL 80%', data:Array(yrs.length).fill(80), borderColor:'#ff4757',
+    borderDash:[4,4], borderWidth:1.5, pointRadius:0
+  }], {xLabel:'Year', yLabel:'SOH (%)'});
+}
+
+function buildLossChart(inp) {
+  const chem = E.CHEMISTRY_DB[inp.chemistry];
+  const inv = E.INVERTER_DB[inp.inverter_type] || E.INVERTER_DB['3L-NPC'];
+  const convL = (1 - chem.rte_base) * 100;
+  const sdL = chem.self_discharge_pct_day * 30;
+  const hvacL = 1.5;
+  const xfL = 0.8;
+  const auxL = 0.5;
+  mkDoughnut('cLoss',
+    ['Conversion','Self-discharge','HVAC/Thermal','Transformer','Aux/BMS'],
+    [convL, sdL, hvacL, xfL, auxL].map(v=>parseFloat(v.toFixed(2))),
+    ['#00c8ff','#9d7fe8','#ffb830','#ff4757','#00e5a0']);
+}
+
+function buildPQChart(inp) {
+  const pe_tmp = new E.PowerElectronicsEngine(inp);
+  const Ppts = Array.from({length:21},(_,i)=>i*inp.rated_power_mw/20);
+  const Qmax = Ppts.map(p => pe_tmp.reactiveCapability(p).toFixed(2));
+  const Qmin = Qmax.map(q => (-q).toString());
+  mkChart('cPQ','line', Ppts.map(p=>p.toFixed(0)+' MW'), [
+    {label:'+Q cap', data:Qmax, borderColor:'#00e5a0', fill:false, tension:.3, borderWidth:2, pointRadius:0},
+    {label:'-Q cap', data:Qmin, borderColor:'#9d7fe8', fill:false, tension:.3, borderWidth:2, pointRadius:0},
+    {label:'Current P', data:Array(21).fill(null), borderColor:'#ffb830', borderWidth:1, borderDash:[3,3], pointRadius:0},
+  ], {xLabel:'P (MW)', yLabel:'Q (MVAR)'});
+}
+
+function buildFreqChart() {
+  const labels = Array.from({length:RING},(_,i)=>i+'s');
+  mkChart('cFreq','line', labels, [{
+    label:'f (Hz)', data:mkRing().map(()=>50), borderColor:'#9d7fe8',
+    fill:false, tension:.3, borderWidth:1.5, pointRadius:0
+  }], {xLabel:'Time', yLabel:'Hz'});
+}
+
+function buildFinanceCharts(inp) {
+  // Placeholder — updated after dispatch sim
+}
+
+/* ── CHART BUILDERS ── */
+const chartDefaults = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false}, tooltip:{
+    backgroundColor:'#16202e', titleColor:'#7a9ec0', bodyColor:'#d4e8ff',
+    borderColor:'rgba(30,48,72,1)', borderWidth:1
+  }},
+  scales:{
+    x:{grid:{color:'rgba(30,72,120,.25)'}, ticks:{color:'#3a5878', font:{family:'IBM Plex Mono',size:9}}},
+    y:{grid:{color:'rgba(30,72,120,.25)'}, ticks:{color:'#7a9ec0', font:{family:'IBM Plex Mono',size:9}}}
+  }
+};
+
+function mkChart(id, type, labels, datasets, opts={}) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  const cfg = JSON.parse(JSON.stringify(chartDefaults));
+  if (opts.multiAxis) {
+    cfg.scales = {
+      x:{grid:{color:'rgba(30,72,120,.2)'},ticks:{color:'#3a5878',font:{family:'IBM Plex Mono',size:9}}},
+      y1:{position:'left',grid:{color:'rgba(30,72,120,.2)'},ticks:{color:'#00e5a0',font:{family:'IBM Plex Mono',size:9},callback:v=>v+'%'}},
+      y2:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#00c8ff',font:{family:'IBM Plex Mono',size:9},callback:v=>v+'MW'}},
+      y3:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#ffb830',font:{family:'IBM Plex Mono',size:9},callback:v=>'₹'+v},display:false}
+    };
+  }
+  charts[id] = new Chart(ctx, { type, data:{labels, datasets}, options:cfg });
+}
+
+function mkDoughnut(id, labels, data, colors) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, {
+    type:'doughnut',
+    data:{labels, datasets:[{data, backgroundColor:colors, borderColor:'#080d1a', borderWidth:2}]},
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{
+        legend:{display:true, position:'bottom', labels:{color:'#7a9ec0', font:{family:'IBM Plex Mono',size:9}, boxWidth:8, padding:6}},
+        tooltip:{backgroundColor:'#16202e', titleColor:'#7a9ec0', bodyColor:'#d4e8ff', borderColor:'rgba(30,48,72,1)', borderWidth:1,
+          callbacks:{label:ctx=>ctx.label+': '+ctx.parsed.toFixed(2)+'%'}}
+      }
+    }
+  });
+}
+
+function buildLiveChart(id, labels, colors) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const ctx = document.getElementById(id)?.getContext('2d');
+  if (!ctx) return;
+  const ts = Array.from({length:RING},(_,i)=>i+'s');
+  charts[id] = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:ts,
+      datasets: labels.map((l,i)=>({
+        label:l, data:mkRing(), borderColor:colors[i],
+        fill:false, tension:.3, borderWidth:1.5, pointRadius:0
+      }))
+    },
+    options:{
+      ...JSON.parse(JSON.stringify(chartDefaults)),
+      animation:{duration:0},
+      plugins:{legend:{display:true, labels:{color:'#3a5878',font:{family:'IBM Plex Mono',size:9},boxWidth:8,padding:6}},
+        tooltip:{backgroundColor:'#16202e',titleColor:'#7a9ec0',bodyColor:'#d4e8ff',borderColor:'rgba(30,48,72,1)',borderWidth:1}}
+    }
+  });
+}
+
+function updateLiveChart(id, dataArrays) {
+  const ch = charts[id];
+  if (!ch) return;
+  dataArrays.forEach((arr, i) => {
+    if (ch.data.datasets[i]) ch.data.datasets[i].data = [...arr];
+  });
+  ch.update('none');
+}
+
+function pushRing(ring, val) {
+  ring[ringIdx % RING] = val;
+}
+
+/* ── SIMULATION STEP ── */
+function simStep() {
+  if (!engines) return;
+  const inp = engines.inp;
+  const h = Math.floor((simTime / 3600) % 24);
+  const f_prev = engines.pe.f_grid || inp.grid_freq;
+  const f_grid = engines.disp.simulateFrequency(f_prev, 5);
+  engines.pe.f_grid = f_grid;
+
+  // Dispatch
+  const ec = engines.ec;
+  const P_demand = engines.disp.dispatch(h, ec.soc*100, engines.deg.soh_capacity*100, f_grid, inp);
+
+  // Physics step (5s)
+  const ecR = ec.step(P_demand, 5);
+  const thR = engines.th.step(ecR.Q_heat_W_cell * inp.total_cells, 5);
+  const peR = engines.pe.step(P_demand, f_grid, inp.pf);
+
+  // Degradation (1 sim-day per 100 real steps ~= fast ageing mode)
+  let degR = null;
+  if (simTime % 500 < 5) {
+    simDay += 0.1;
+    degR = engines.deg.step(thR.T_cell, inp.dod/100, inp.c_rate, 0.1, Math.abs(ecR.I_cell)*5/3600);
+  }
+
+  // Fault detection
+  const faults = engines.fault.checkProtection(ecR.I_pack, ecR.V_pack, f_grid, thR.T_cell, ec.soc);
+
+  // Ring update
+  pushRing(rings.soc, ecR.soc.toFixed(1));
+  pushRing(rings.power, P_demand.toFixed(1));
+  pushRing(rings.temp_cell, thR.T_cell.toFixed(2));
+  pushRing(rings.temp_mod, thR.T_module.toFixed(2));
+  pushRing(rings.temp_cont, thR.T_container.toFixed(2));
+  pushRing(rings.hvac, thR.hvac_kW.toFixed(1));
+  pushRing(rings.qheat, (thR.Q_heat_W / 1000).toFixed(2));
+  pushRing(rings.freq, f_grid.toFixed(3));
+  pushRing(rings.vpack, ecR.V_pack.toFixed(0));
+  pushRing(rings.ipack, ecR.I_pack.toFixed(0));
+  pushRing(rings.vi_v, ecR.V_cell.toFixed(3));
+  pushRing(rings.vi_i, ecR.I_cell.toFixed(2));
+  ringIdx++;
+
+  // Reorder ring for display
+  const ordered = r => {
+    const i = ringIdx % RING;
+    return [...r.slice(i), ...r.slice(0, i)];
+  };
+
+  // Update KPIs
+  set('kSOC', ecR.soc.toFixed(1));
+  set('kTemp', thR.T_cell.toFixed(1));
+  set('kSOH', (engines.deg.soh_capacity*100).toFixed(1));
+  set('kRTE', peR.eff_pct.toFixed(1));
+  set('kPGrid', peR.P_grid_MW.toFixed(1));
+  set('kDf', peR.df_mHz.toFixed(1));
+  set('hFreq', f_grid.toFixed(2));
+  set('hEFC', engines.ec.efc.toFixed(0));
+  set('hSOH', (engines.deg.soh_capacity*100).toFixed(1));
+
+  // SOC gauge
+  const socPct = ecR.soc / 100;
+  const arcLen = 195;
+  document.getElementById('gaugeArc').setAttribute('stroke-dashoffset', (arcLen*(1-socPct)).toFixed(1));
+  document.getElementById('gaugeTxt').textContent = ecR.soc.toFixed(1)+'%';
+  const usable = inp.energy_capacity_mwh * inp.dod/100;
+  set('avail_E', (ecR.soc/100*usable).toFixed(1) + ' MWh');
+  document.getElementById('socFill').style.width = ecR.soc + '%';
+
+  // SOC color
+  const scolor = ecR.soc < 20 ? 'var(--red)' : ecR.soc < 40 ? 'var(--amber)' : 'var(--green)';
+  document.getElementById('socFill').style.background = `linear-gradient(90deg, ${scolor}, ${scolor})`;
+  document.getElementById('gaugeTxt').setAttribute('fill', scolor.replace('var(--','#').replace(')','').replace('green','00e5a0').replace('amber','ffb830').replace('red','ff4757'));
+
+  // Time to full/empty
+  const chargeRate = inp.rated_power_mw;
+  const ttf_h = ((inp.soc_max - ecR.soc) / 100 * usable) / chargeRate;
+  const tte_h = ((ecR.soc - inp.soc_min) / 100 * usable) / chargeRate;
+  set('ttf', Math.floor(ttf_h)+'h '+Math.round((ttf_h%1)*60)+'m');
+  set('tte', Math.floor(tte_h)+'h '+Math.round((tte_h%1)*60)+'m');
+
+  // Power flow nodes
+  set('pn-re', (P_demand < 0 ? Math.abs(P_demand) : 0).toFixed(1) + ' MW');
+  set('pn-pcs', Math.abs(peR.P_ac_MW).toFixed(1) + ' MW');
+  set('pn-batt', (ecR.soc/100*usable).toFixed(0) + ' MWh');
+  set('pn-grid', Math.abs(peR.P_grid_MW).toFixed(1) + ' MW');
+  set('pn-hvac', thR.hvac_kW.toFixed(0) + ' kW');
+
+  // Right panel telemetry
+  set('rt-vpack', ecR.V_pack.toFixed(0)+' V');
+  set('rt-ipack', ecR.I_pack.toFixed(0)+' A');
+  set('rt-tcell', thR.T_cell.toFixed(1)+'°C');
+  set('rt-hvac', thR.hvac_kW.toFixed(0)+' kW');
+  set('rt-ploss', (peR.P_xfmr_MW*1000+peR.P_aux_MW*1000).toFixed(0)+' kW');
+  set('rt-freq', f_grid.toFixed(3)+' Hz');
+
+  // Electrochemistry tab
+  const ocv = ec.ocv(ec.soc);
+  set('ec-ocv', ocv.toFixed(4));
+  set('ec-vt', ecR.V_cell.toFixed(4));
+  set('ec-vpack', ecR.V_pack.toFixed(1));
+  set('ec-ic', ecR.I_cell.toFixed(2));
+  set('ec-ri', ecR.Ri_mohm.toFixed(4));
+  set('ec-efc', ec.efc.toFixed(1));
+  set('ec-cr', (Math.abs(ecR.I_cell)/inp.cell_capacity).toFixed(3));
+
+  // Thermal tab
+  const thStatus = T => T < 40 ? '<span class="badge live">NORMAL</span>' : T < 50 ? '<span class="badge warn">WARNING</span>' : '<span class="badge err">CRITICAL</span>';
+  set('th-cell', thR.T_cell.toFixed(2)+'°C');
+  document.getElementById('th-cell-s').innerHTML = thStatus(thR.T_cell);
+  set('th-mod', thR.T_module.toFixed(2)+'°C');
+  document.getElementById('th-mod-s').innerHTML = thStatus(thR.T_module);
+  set('th-cont', thR.T_container.toFixed(2)+'°C');
+  document.getElementById('th-cont-s').innerHTML = thStatus(thR.T_container);
+  set('th-hvac', thR.hvac_kW.toFixed(1)+' kW');
+  set('th-qheat', (thR.Q_heat_W/1000).toFixed(2)+' kW');
+  const chem = E.CHEMISTRY_DB[inp.chemistry];
+  document.getElementById('th-risk').innerHTML = `<span class="badge ${thR.thermal_risk==='LOW'?'live':thR.thermal_risk==='MEDIUM'?'warn':'err'}">${thR.thermal_risk}</span>`;
+  set('th-trT', chem.thermal_runaway_T+' °C');
+
+  // Grid tab
+  set('g-eff', peR.eff_pct.toFixed(2));
+  set('g-pac', peR.P_ac_MW.toFixed(2));
+  set('g-q', (peR.Q_MVAR||0).toFixed(2));
+  set('g-s', (peR.S_MVA||0).toFixed(2));
+  set('g-xfmr', peR.P_xfmr_MW.toFixed(4));
+  set('g-thd', peR.thd_pct.toFixed(1));
+  set('g-frp', peR.dP_freq_MW.toFixed(2));
+  set('g-rt', peR.response_ms);
+  set('g-mi', peR.modulation_index.toFixed(3));
+
+  // Degradation tab (update if new data)
+  if (degR) {
+    set('db-sohC', degR.soh_capacity.toFixed(1)+'%');
+    set('db-sohP', degR.soh_power.toFixed(1)+'%');
+    set('db-capF', degR.capacity_fade_pct.toFixed(2)+'%');
+    set('db-ri', degR.resistance_rise_pct.toFixed(2)+'%');
+    document.getElementById('df-sohC').style.width = degR.soh_capacity+'%';
+    document.getElementById('df-sohP').style.width = degR.soh_power+'%';
+    document.getElementById('df-capF').style.width = Math.min(degR.capacity_fade_pct*5,100)+'%';
+    document.getElementById('df-ri').style.width = Math.min(degR.resistance_rise_pct*3,100)+'%';
+    set('d-y80', degR.years_to_eol_80.toFixed(1)+' yr');
+    set('d-y70', degR.years_to_eol_70.toFixed(1)+' yr');
+    set('d-efc', ec.efc.toFixed(1));
+    set('d-ah', degR.total_Ah_throughput.toFixed(0)+' Ah');
+  }
+
+  // Fault log
+  updateFaultLog();
+
+  // Live charts (every 5 steps for perf)
+  if (ringIdx % 5 === 0) {
+    updateLiveChart('cVI', [ordered(rings.vi_v), ordered(rings.vi_i)]);
+    updateLiveChart('cTemp', [ordered(rings.temp_cell), ordered(rings.temp_mod), ordered(rings.temp_cont)]);
+    updateLiveChart('cHVAC', [ordered(rings.hvac), ordered(rings.qheat)]);
+    // Freq chart
+    if (charts['cFreq']) {
+      charts['cFreq'].data.datasets[0].data = ordered(rings.freq).map(v=>parseFloat(v));
+      charts['cFreq'].update('none');
+    }
+  }
+
+  simTime += 5;
+}
+
+/* ── FAULT UI ── */
+function updateFaultLog() {
+  const el = document.getElementById('faultLog');
+  const faults = engines?.fault?.faults || [];
+  set('tripBadge', (engines?.fault?.trip_count||0)+' TRIPS');
+  if (faults.length === 0) {
+    el.innerHTML = '<div class="no-faults">No active faults — protection system nominal</div>';
+    return;
+  }
+  el.innerHTML = faults.map(f => `
+    <div class="fault-item ${f.severity}">
+      <div class="fdot ${f.severity}"></div>
+      <div>
+        <div class="frelay">${f.relay}</div>
+        <div class="ftext">${f.msg}</div>
+        <div class="ftime">${f.timestamp}</div>
+      </div>
+    </div>`).join('');
+}
+
+function injectFault(type) {
+  if (!engines) { log('⚠ Start simulation first'); return; }
+  engines.fault.injectFault(type);
+  updateFaultLog();
+  log(`Fault injected: ${type}`);
+  showTab('faults', document.querySelectorAll('.tab')[6]);
+}
+
+function clearFaults() {
+  engines?.fault?.clearFaults();
+  updateFaultLog();
+  log('Fault log cleared');
+}
+
+/* ── FINANCE UI ── */
+function updateFinanceUI(fin) {
+  const cr = v => '₹' + Math.abs(v>=1e7 ? (v/1e7).toFixed(1)+' Cr' : (v/1e5).toFixed(1)+' L');
+  set('f-capex', cr(fin.capex.total));
+  set('f-rev', cr(fin.annual_rev));
+  set('f-opex', cr(fin.annual_opex));
+  set('f-pb', fin.payback_yr.toFixed(1)+' yr');
+  document.getElementById('f-npv').textContent = cr(fin.npv_val);
+  document.getElementById('f-npv').style.color = fin.npv_val>0 ? 'var(--green)':'var(--red)';
+  set('f-irr', fin.irr_pct.toFixed(1)+'%');
+  set('f-lcoe', '₹'+fin.lcoe_inr_kwh.toFixed(2)+'/kWh');
+  set('f-batRep', cr(fin.capex.battery_cost*0.65));
+  set('f-batRepYr', fin.battery_replacement_yr);
+  // Right panel
+  set('rs-daily', cr(fin.daily_net));
+  set('rs-ann', cr(fin.annual_rev));
+  set('rs-capex', cr(fin.capex.total));
+  document.getElementById('rs-npv').textContent = cr(fin.npv_val);
+  document.getElementById('rs-npv').style.color = fin.npv_val>0?'var(--green)':'var(--red)';
+  set('rs-irr', fin.irr_pct.toFixed(1)+'%');
+  set('rs-lcoe', '₹'+fin.lcoe_inr_kwh.toFixed(2)+'/kWh');
+
+  // Cashflow chart
+  if (fin.cashflows) {
+    const yrLabels = fin.cashflows.map((_,i)=>'Y'+(i+1));
+    const cashCr = fin.cashflows.map(v=>parseFloat((v/1e7).toFixed(2)));
+    const colors = cashCr.map(v=>v>=0?'rgba(0,229,160,.7)':'rgba(255,71,87,.7)');
+    if (charts['cCash']) charts['cCash'].destroy();
+    const ctx = document.getElementById('cCash')?.getContext('2d');
+    if (ctx) {
+      charts['cCash'] = new Chart(ctx, {
+        type:'bar', data:{labels:yrLabels, datasets:[{label:'Net CF (₹ Cr)',data:cashCr,backgroundColor:colors,borderColor:colors.map(c=>c.replace('.7','.9')),borderWidth:1,borderRadius:2}]},
+        options:{...JSON.parse(JSON.stringify(chartDefaults)),plugins:{legend:{display:false},tooltip:{backgroundColor:'#16202e',titleColor:'#7a9ec0',bodyColor:'#d4e8ff',borderColor:'rgba(30,48,72,1)',borderWidth:1,callbacks:{label:c=>'₹'+c.parsed.y.toFixed(1)+' Cr'}}}}
+      });
+    }
+    // Capex pie
+    const cx = fin.capex;
+    mkDoughnut('cCapex',
+      ['Battery','PCS','BoP','EPC','Contingency'],
+      [cx.battery_cost,cx.pcs_cost,cx.bop_cost,cx.epc_cost,cx.contingency].map(v=>parseFloat((v/1e7).toFixed(1))),
+      ['#00c8ff','#9d7fe8','#ffb830','#ff4757','#00e5a0']);
+  }
+}
+
+/* ── PACK + CHEMISTRY UI ── */
+function updatePackUI(pack, inp) {
+  const chem = E.CHEMISTRY_DB[inp.chemistry];
+  set('r-racks', pack.total_racks.toLocaleString());
+  set('r-series', pack.cells_per_string);
+  set('r-par', pack.strings_per_rack);
+  set('r-cells', pack.total_cells.toLocaleString());
+  set('r-sv', pack.string_V.toFixed(1)+' V');
+  set('r-re', pack.rack_energy_kWh.toFixed(2)+' kWh');
+  set('r-cont', pack.containers_40ft);
+  set('r-pcs', pack.pcs_units);
+  set('r-mass', pack.total_mass_t.toFixed(1)+' t');
+  set('r-fp', pack.footprint_m2.toLocaleString()+' m²');
+  // Chemistry
+  set('ci-name', chem.name);
+  set('ci-v', `${chem.V_nom} / ${chem.V_max} / ${chem.V_min} V`);
+  set('ci-ed', `${chem.energy_density_wh_kg} Wh/kg | ${chem.energy_density_wh_l} Wh/L`);
+  set('ci-cl', chem.cycle_life_80dod.toLocaleString()+' cycles');
+  set('ci-cal', chem.calendar_life_yr+' yr');
+  set('ci-rte', (chem.rte_base*100).toFixed(1)+'%');
+  set('ci-tr', chem.thermal_runaway_T === 999 ? '>300°C (safe)' : chem.thermal_runaway_T+'°C');
+  // KPI update
+  set('kPow', inp.rated_power_mw);
+  set('kEn', (inp.energy_capacity_mwh*inp.dod/100).toFixed(0));
+  set('kSOC', inp.soc_init.toFixed(1));
+  set('kSOH', '100.0');
+  set('kRTE', (chem.rte_base*100).toFixed(1));
+  set('socMinLbl', 'SOC_MIN: '+inp.soc_min+'%');
+  set('socMaxLbl', 'SOC_MAX: '+inp.soc_max+'%');
+  document.getElementById('socFill').style.width = inp.soc_init+'%';
+  const usable = inp.energy_capacity_mwh*inp.dod/100;
+  set('avail_E', (inp.soc_init/100*usable).toFixed(1)+' MWh');
+  document.getElementById('gaugeTxt').textContent = inp.soc_init.toFixed(1)+'%';
+  document.getElementById('gaugeArc').setAttribute('stroke-dashoffset', (195*(1-inp.soc_init/100)).toFixed(1));
+  // Degradation lifecycle
+  const repYr = Math.round(inp.cycle_life / (365 * inp.c_rate * 0.8));
+  set('d-repY', 'Year '+repYr);
+}
+
+/* ── SIMULATION CONTROL ── */
+function applyAndRun() {
+  stopSim();
+  const inp = getInp();
+  initEngines(inp);
+  const pack = E.configurePackage(inp);
+  updatePackUI(pack, inp);
+  buildStaticCharts(inp);
+
+  // Run dispatch for finance
+  const disp = new E.DispatchEngine(inp);
+  const res = disp.simulate24h(inp, inp.soc_init);
+  const fin = engines.fin.fullAnalysis(res.daily_net);
+  updateFinanceUI(fin);
+
+  log(`Simulation configured: ${inp.rated_power_mw} MW / ${inp.energy_capacity_mwh} MWh ${inp.chemistry}`);
+  log(`Pack: ${pack.total_racks} racks, ${pack.total_cells.toLocaleString()} cells, ${pack.containers_40ft} containers`);
+  log(`Economics: CAPEX ₹${(fin.capex.total/1e7).toFixed(1)} Cr | IRR ${fin.irr_pct.toFixed(1)}% | LCOE ₹${fin.lcoe_inr_kwh.toFixed(2)}/kWh`);
+
+  startSim();
+}
+
+function startSim() {
+  simRunning = true;
+  simInterval = setInterval(simStep, 200); // 5× real-time
+  document.getElementById('masterBtn').textContent = '⏹ STOP SIM';
+  document.getElementById('masterBtn').classList.add('stop');
+  document.getElementById('simBadge').textContent = '● RUNNING';
+  document.getElementById('simBadge').className = 'h-sim-status running';
+  document.getElementById('simStatusTxt').textContent = 'SIM RUNNING';
+  document.getElementById('simDot').className = 'dot g';
+  log('Simulation started');
+}
+
+function stopSim() {
+  simRunning = false;
+  if (simInterval) clearInterval(simInterval);
+  simInterval = null;
+  document.getElementById('masterBtn').textContent = '▶ START SIM';
+  document.getElementById('masterBtn').classList.remove('stop');
+  document.getElementById('simBadge').textContent = '● STOPPED';
+  document.getElementById('simBadge').className = 'h-sim-status stopped';
+  document.getElementById('simStatusTxt').textContent = 'SIM IDLE';
+  document.getElementById('simDot').className = 'dot a';
+}
+
+function toggleSimulation() {
+  if (simRunning) stopSim();
+  else { if (engines) startSim(); else applyAndRun(); }
+}
+
+function onChemChange() {
+  const chem = E.CHEMISTRY_DB[document.getElementById('chemistry').value];
+  if (!chem) return;
+  document.getElementById('cellV').value = chem.V_nom;
+  document.getElementById('cycleLife').value = chem.cycle_life_80dod;
+  document.getElementById('calLife').value = chem.calendar_life_yr;
+}
+
+/* ── HELPERS ── */
+function set(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+/* ── CLOCK ── */
+setInterval(()=>{
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-IN',{hour12:false});
+}, 1000);
+
+/* ── LOADER ── */
+const ldSteps = [
+  'Loading physics engine...',
+  'Initialising electrochemistry models...',
+  'Configuring thermal solver...',
+  'Building grid interface...',
+  'Compiling financial models...',
+  'System ready.'
+];
+let ldI = 0;
+const ldTimer = setInterval(()=>{
+  document.getElementById('ldStep').textContent = ldSteps[ldI++ % ldSteps.length];
+}, 320);
+
+window.addEventListener('load', ()=>{
+  setTimeout(()=>{
+    clearInterval(ldTimer);
+    document.getElementById('loader').style.display = 'none';
+    // Auto-run with defaults
+    applyAndRun();
+  }, 2000);
+});
+</script>
+</body>
+</html>
